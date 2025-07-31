@@ -59,8 +59,8 @@ async function testSequentialPolls() {
 
   // Test 8: Submit Responses for Poll 2
   console.log("\n8. Submitting responses for Poll 2...");
-  if (student1) pollSessionManager.submitResponse(student1.id, 0); // React
-  if (student2) pollSessionManager.submitResponse(student2.id, 0); // React
+  if (student1) pollSessionManager.submitResponse(student1.id, 0);
+  if (student2) pollSessionManager.submitResponse(student2.id, 0);
 
   // Test 9: Get Results for Poll 2
   console.log("\n9. Getting results for Poll 2...");

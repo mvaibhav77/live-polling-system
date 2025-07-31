@@ -26,6 +26,17 @@ class PollSessionManager {
       this.savePollToSessionHistory();
     }
 
+    // Preserve existing students but reset their answered status
+    const existingStudents = new Map<string, Student>();
+    if (this.currentPoll) {
+      this.currentPoll.students.forEach((student, studentId) => {
+        existingStudents.set(studentId, {
+          ...student,
+          hasAnswered: false, // Reset for new poll
+        });
+      });
+    }
+
     // Increment sequence number for new poll
     this.pollSequenceNumber++;
 
@@ -37,8 +48,8 @@ class PollSessionManager {
       options,
       timeLimit,
       status: "waiting",
-      students: new Map(),
-      responses: new Map(),
+      students: existingStudents, // Keep existing students
+      responses: new Map(), // Clear previous responses
       createdAt: Date.now(),
     };
 
