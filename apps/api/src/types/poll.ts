@@ -9,6 +9,7 @@ export interface Student {
 
 export interface GlobalPollSession {
   pollId: string;
+  questionNumber: number; // Question 1, Question 2, etc.
   question: string;
   options: string[];
   timeLimit: number;
@@ -51,9 +52,21 @@ export interface SubmitResponseRequest {
 }
 
 export interface PollResults {
+  pollId: string;
+  questionNumber: number;
   question: string;
   options: string[];
   responses: Record<string, number>; // optionIndex -> count
   totalStudents: number;
   totalResponses: number;
+}
+
+// Session management types
+export interface SessionPollHistory {
+  pollId: string;
+  questionNumber: number;
+  question: string;
+  options: string[];
+  results: PollResults;
+  completedAt: number;
 }

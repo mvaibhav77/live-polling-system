@@ -1,8 +1,15 @@
-import { GlobalPollSession, Student, PollResults } from "../types/poll";
+import {
+  GlobalPollSession,
+  Student,
+  PollResults,
+  SessionPollHistory,
+} from "../types/poll";
 import { v4 as uuidv4 } from "uuid";
 
 class PollSessionManager {
   private currentPoll: GlobalPollSession | null = null;
+  private pollSequenceNumber: number = 0; // Track question numbers
+  private sessionHistory: SessionPollHistory[] = []; // Store completed polls in session
 
   getCurrentPoll(): GlobalPollSession | null {
     return this.currentPoll;
@@ -14,9 +21,18 @@ class PollSessionManager {
     options: string[],
     timeLimit: number = 60
   ): GlobalPollSession {
+    // Save previous poll to session history if it exists and is completed
+    if (this.currentPoll && this.currentPoll.status === "ended") {
+      this.savePollToSessionHistory();
+    }
+
+    // Increment sequence number for new poll
+    this.pollSequenceNumber++;
+
     const pollId = this.generateId();
     this.currentPoll = {
       pollId,
+      questionNumber: this.pollSequenceNumber,
       question,
       options,
       timeLimit,
@@ -26,7 +42,9 @@ class PollSessionManager {
       createdAt: Date.now(),
     };
 
-    console.log(`📊 New poll created: ${question}`);
+    console.log(
+      `📊 New poll created - Question ${this.pollSequenceNumber}: ${question}`
+    );
     return this.currentPoll;
   }
 
@@ -155,6 +173,8 @@ class PollSessionManager {
     });
 
     return {
+      pollId: this.currentPoll.pollId,
+      questionNumber: this.currentPoll.questionNumber,
       question: this.currentPoll.question,
       options: this.currentPoll.options,
       responses: responseCounts,
@@ -202,9 +222,50 @@ class PollSessionManager {
     return {
       hasPoll: !!this.currentPoll,
       pollStatus: this.currentPoll?.status || null,
+      currentQuestionNumber: this.currentPoll?.questionNumber || 0,
       studentsCount: this.currentPoll?.students.size || 0,
       responsesCount: this.currentPoll?.responses.size || 0,
+      totalQuestionsAsked: this.pollSequenceNumber,
+      completedPolls: this.sessionHistory.length,
     };
+  }
+
+  // Get session history
+  getSessionHistory(): SessionPollHistory[] {
+    return this.sessionHistory;
+  }
+
+  // Save completed poll to session history
+  private savePollToSessionHistory(): void {
+    if (!this.currentPoll || this.currentPoll.status !== "ended") return;
+
+    const results = this.getPollResults();
+    if (results) {
+      const historyEntry: SessionPollHistory = {
+        pollId: this.currentPoll.pollId,
+        questionNumber: this.currentPoll.questionNumber,
+        question: this.currentPoll.question,
+        options: this.currentPoll.options,
+        results,
+        completedAt: this.currentPoll.endTime || Date.now(),
+      };
+
+      this.sessionHistory.push(historyEntry);
+      console.log(
+        `📚 Poll saved to session history: Question ${this.currentPoll.questionNumber}`
+      );
+    }
+  }
+
+  // Reset entire session (for new teaching session)
+  resetSession(): void {
+    if (this.currentPoll?.timer) {
+      clearTimeout(this.currentPoll.timer);
+    }
+    this.currentPoll = null;
+    this.pollSequenceNumber = 0;
+    this.sessionHistory = [];
+    console.log("🔄 Session reset - ready for new teaching session");
   }
 
   // Helper method to generate IDs
