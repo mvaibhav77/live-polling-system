@@ -1,17 +1,36 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import { createServer } from "http";
+import { Server } from "socket.io";
 import prisma from "./config/database";
+import historyRoutes from "./routes/historyRoutes";
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    methods: ["GET", "POST"],
+  },
+});
 const PORT = process.env.PORT || 3001;
 
 // Middlewares
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    credentials: true,
+  })
+);
 app.use(express.json());
+
+// API Routes
+app.use("/api/history", historyRoutes);
+
 
 // Routes
 app.get("/", (req, res) => {
@@ -52,8 +71,10 @@ app.get("/api/test-db", async (req, res) => {
   }
 });
 
+// Setup Socket.io
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Live Polling API is ready!`);
   console.log(
