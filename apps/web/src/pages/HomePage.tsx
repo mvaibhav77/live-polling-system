@@ -31,7 +31,7 @@ const HomePage: React.FC = () => {
 
   const handleNavigate = () => {
     if (selectedRole === "student") {
-      navigate("/poll");
+      navigate("/student");
     } else if (selectedRole === "teacher") {
       navigate("/teacher");
     } else {
@@ -54,8 +54,8 @@ const HomePage: React.FC = () => {
 
           {/* Subheading */}
           <p className="text-muted text-lg">
-            Please select a role to access the polling system. Choose either
-            Student to participate or Teacher to create and manage polls.
+            Please select the role that best describes you to begin using the
+            live polling system
           </p>
         </div>
 

@@ -6,7 +6,8 @@ import {
 } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import TeacherPage from "./pages/TeacherPage";
-import StudentPage from "./pages/StudentPage";
+import StudentStarter from "./pages/StudentStarter";
+import PollArea from "./pages/PollArea";
 
 function App() {
   return (
@@ -15,7 +16,9 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/teacher" element={<TeacherPage />} />
-          <Route path="/poll" element={<StudentPage />} />
+          <Route path="/student" element={<StudentStarter />} />
+
+          <Route path="/poll" element={<PollArea name="" />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
