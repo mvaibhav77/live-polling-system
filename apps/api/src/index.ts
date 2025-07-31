@@ -5,6 +5,8 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import prisma from "./config/database";
 import historyRoutes from "./routes/historyRoutes";
+import pollRoutes from "./routes/pollRoutes";
+import { setupSocketHandlers } from "./sockets/pollEvents";
 
 // Load environment variables
 dotenv.config();
@@ -30,7 +32,7 @@ app.use(express.json());
 
 // API Routes
 app.use("/api/history", historyRoutes);
-
+app.use("/api", pollRoutes);
 
 // Routes
 app.get("/", (req, res) => {
@@ -72,6 +74,7 @@ app.get("/api/test-db", async (req, res) => {
 });
 
 // Setup Socket.io
+setupSocketHandlers(io);
 
 // Start server
 server.listen(PORT, () => {
