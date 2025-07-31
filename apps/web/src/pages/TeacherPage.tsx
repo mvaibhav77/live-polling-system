@@ -1,15 +1,280 @@
-function TeacherPage() {
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-foreground mb-8">
-          Teacher Dashboard
-        </h1>
+import { useState } from "react";
+import { useAppSelector } from "../store/hooks";
+import Pill from "../components/Pill";
+import Button from "../components/Button";
 
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <p className="text-muted">
-            Teacher controls and poll management will be implemented here.
-          </p>
+interface PollOption {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+}
+
+function TeacherPage() {
+  const { isLoading } = useAppSelector((state) => state.teacher);
+
+  const [question, setQuestion] = useState("");
+  const [timeLimit, setTimeLimit] = useState(60);
+  const [options, setOptions] = useState<PollOption[]>([
+    { id: "1", text: "", isCorrect: false },
+    { id: "2", text: "", isCorrect: false },
+  ]);
+
+  const handleOptionChange = (id: string, text: string) => {
+    setOptions(
+      options.map((option) => (option.id === id ? { ...option, text } : option))
+    );
+  };
+
+  const handleCorrectAnswerChange = (id: string, isCorrect: boolean) => {
+    setOptions(
+      options.map((option) =>
+        option.id === id ? { ...option, isCorrect } : option
+      )
+    );
+  };
+
+  const addMoreOption = () => {
+    const newOption: PollOption = {
+      id: Date.now().toString(),
+      text: "",
+      isCorrect: false,
+    };
+    setOptions([...options, newOption]);
+  };
+
+  const deleteOption = (id: string) => {
+    // Don't allow deleting if there are only 2 options left
+    if (options.length <= 2) return;
+
+    setOptions(options.filter((option) => option.id !== id));
+  };
+
+  const handleSubmit = () => {
+    if (!question.trim() || options.some((opt) => !opt.text.trim())) {
+      return;
+    }
+
+    // TODO: Implement poll creation logic
+    console.log({
+      question,
+      timeLimit,
+      options: options.filter((opt) => opt.text.trim()),
+    });
+  };
+
+  return (
+    <div className="md:h-screen min-h-screen md:overflow-hidden w-full flex flex-col justify-between">
+      <div className="md:pt-[8vh] md:px-[10vw] h-full h-max-[calc(100vh-8vh-88px)] overflow-y-scroll p-4 flex flex-col justify-between">
+        <div className="md:max-w-3/5 w-full  flex flex-col items-stretch justify-around">
+          {/* Header */}
+          <div className="flex flex-col gap-6 items-start mb-8">
+            <Pill />
+
+            <div className="w-full flex flex-col gap-2">
+              <h1 className="text-5xl font-light tracking-tight">
+                Let's <span className="font-medium">Get Started</span>
+              </h1>
+              <p className="text-gray-600">
+                You'll have the ability to create and manage polls, ask
+                questions, and monitor your students' responses in real-time.
+              </p>
+            </div>
+          </div>
+
+          {/* Question Input */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <label className="block font-semibold text-gray-900">
+                Enter your question
+              </label>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-500">
+                  {question.length}/100
+                </span>
+                <div className="relative">
+                  <select
+                    value={timeLimit}
+                    onChange={(e) => setTimeLimit(Number(e.target.value))}
+                    className="appearance-none bg-background border border-gray-300 px-4 py-2 pr-8 text-sm font-medium text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer"
+                  >
+                    <option value={30}>30 seconds</option>
+                    <option value={60}>60 seconds</option>
+                    <option value={90}>90 seconds</option>
+                    <option value={120}>120 seconds</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg
+                      className="w-4 h-4 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <textarea
+              value={question}
+              onChange={(e) => setQuestion(e.target.value.slice(0, 100))}
+              placeholder="What is the capital of France?"
+              className="w-full h-24 max-h-[250px] p-4 border border-gray-200 bg-background resize focus:ring-2focus:border-transparent"
+            />
+          </div>
+
+          {/* Options Section */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-gray-900">Edit Options</h3>
+              <h3 className="font-semibold text-gray-900">Is It Correct?</h3>
+            </div>
+
+            <div className="options">
+              {options.map((option, index) => (
+                <div key={option.id} className="flex items-center gap-4 p-1.5">
+                  <div className="flex items-center gap-3 flex-1">
+                    {/* Numbered Circle with Delete Functionality */}
+                    <button
+                      onClick={() => deleteOption(option.id)}
+                      disabled={options.length <= 2}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-200 group ${
+                        options.length <= 2
+                          ? "bg-primary text-white cursor-not-allowed"
+                          : "bg-primary text-white hover:bg-red-500 cursor-pointer"
+                      }`}
+                    >
+                      <span
+                        className={`transition-all duration-200 ${
+                          options.length <= 2 ? "block" : "group-hover:hidden"
+                        }`}
+                      >
+                        {index + 1}
+                      </span>
+                      {options.length > 2 && (
+                        <svg
+                          className="w-4 h-4 hidden group-hover:block"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                    <input
+                      type="text"
+                      value={option.text}
+                      onChange={(e) =>
+                        handleOptionChange(option.id, e.target.value)
+                      }
+                      placeholder={`Option ${index + 1}`}
+                      className="flex-1 px-4 py-3 bg-background"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <div className="relative">
+                          <input
+                            type="radio"
+                            name={`correct-${option.id}`}
+                            checked={option.isCorrect}
+                            onChange={() => {
+                              // Only one option can be correct
+                              setOptions(
+                                options.map((opt) => ({
+                                  ...opt,
+                                  isCorrect: opt.id === option.id,
+                                }))
+                              );
+                            }}
+                            className="sr-only"
+                          />
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                              option.isCorrect
+                                ? "border-primary bg-primary"
+                                : "border-gray-300 bg-white hover:border-primary"
+                            }`}
+                          >
+                            {option.isCorrect && (
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          Yes
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <div className="relative">
+                          <input
+                            type="radio"
+                            name={`correct-${option.id}`}
+                            checked={!option.isCorrect}
+                            onChange={() =>
+                              handleCorrectAnswerChange(option.id, false)
+                            }
+                            className="sr-only"
+                          />
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                              !option.isCorrect
+                                ? "border-gray-400 bg-gray-400"
+                                : "border-gray-300 bg-white hover:border-gray-400"
+                            }`}
+                          >
+                            {!option.isCorrect && (
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          No
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6">
+              <Button onClick={addMoreOption} variant="secondary">
+                + Add More option
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Submit Button */}
+      <div className="footer">
+        <hr className="text-muted " />
+        <div className="flex justify-end py-4 px-4 md:px-[10vw]">
+          <Button
+            onClick={handleSubmit}
+            disabled={
+              isLoading ||
+              !question.trim() ||
+              options.every((opt) => !opt.text.trim())
+            }
+          >
+            {isLoading ? "Creating..." : "Ask Question"}
+          </Button>
         </div>
       </div>
     </div>

@@ -77,11 +77,12 @@ const HomePage: React.FC = () => {
 
         {/* Continue Button */}
         <Button
-          text="Continue"
           className="mt-6"
           onClick={handleNavigate}
           disabled={!selectedRole}
-        />
+        >
+          Continue
+        </Button>
       </div>
     </div>
   );

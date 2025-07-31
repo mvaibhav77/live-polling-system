@@ -14,7 +14,7 @@ const StudentStarter: React.FC = () => {
   };
 
   return (
-    <div className="text-light min-h-screen flex items-center justify-center font-sans p-4">
+    <div className="min-h-screen flex items-center justify-center font-sans p-4">
       <div className="w-full max-w-4xl mx-auto flex flex-col gap-10 items-center text-center">
         {/* Top Pill */}
         <Pill />
@@ -51,12 +51,13 @@ const StudentStarter: React.FC = () => {
 
           {/* Continue Button */}
           <Button
-            text="Continue"
             className="mt-12"
             onClick={handleSubmit}
             type="submit"
             disabled={!name}
-          />
+          >
+            Continue
+          </Button>
         </div>
       </div>
     </div>

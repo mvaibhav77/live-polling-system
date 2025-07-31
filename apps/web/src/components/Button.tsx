@@ -1,20 +1,35 @@
+import type { ReactNode } from "react";
+
 type ButtonProps = {
-  text: string;
   onClick?: () => void;
   disabled?: boolean;
   className?: string;
   type?: "button" | "submit" | "reset";
+  children: ReactNode;
+  variant?: "primary" | "secondary";
 };
 
-const Button = (props: ButtonProps) => {
+const Button = ({ variant = "primary", ...props }: ButtonProps) => {
+  const baseClasses = "transition-colors focus:outline-none";
+  const disabledClasses = props.disabled
+    ? "opacity-50 cursor-not-allowed"
+    : "cursor-pointer";
+
+  const variantClasses = {
+    primary:
+      "bg-primary py-4 px-16 rounded-full text-white hover:bg-primary/90",
+    secondary:
+      "py-3 px-10 border-2 border-primary rounded-xl text-primary bg-transparent hover:bg-primary hover:text-white",
+  };
+
   return (
     <button
       type={props.type}
       onClick={props.onClick}
       disabled={props.disabled}
-      className={`py-4 px-16 rounded-full transition-colors focus:outline-none bg-primary text-white hover:bg-primary/90 ${props.className} ${props.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+      className={`${baseClasses} ${variantClasses[variant]} ${disabledClasses} ${props.className}`}
     >
-      {props.text}
+      {props.children}
     </button>
   );
 };
