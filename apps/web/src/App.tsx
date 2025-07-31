@@ -1,13 +1,26 @@
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import HomePage from "./pages/HomePage";
+import TeacherPage from "./pages/TeacherPage";
+import StudentPage from "./pages/StudentPage";
+
 function App() {
   return (
-    <>
-      <div className="bg-foreground">
-        <h1 className="text-3xl font-bold">Welcome to the Polling App</h1>
-        <p className="mt-4">
-          This is a simple app to demonstrate live polling functionality.
-        </p>
+    <Router>
+      <div className="min-h-screen bg-background">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/teacher" element={<TeacherPage />} />
+          <Route path="/poll" element={<StudentPage />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </div>
-    </>
+    </Router>
   );
 }
 

@@ -1,12 +1,22 @@
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@100;200;300;400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 @theme {
   --color-background: #f2f2f2; /* light */
   --color-foreground: #373737; /* dark */
 
-  --color-primary: #4f0dce;
+  --color-primary: #7765da;
   --color-secondary: #5767d0;
-  --color-accent: #7765da;
+  --color-accent: #4f0dce;
 
   --color-muted: #6e6e6e;
+
+  /* Font Families */
+  --font-sans: "Sora", sans-serif;
+  /* --font-primary: "Sora", sans-serif;
+  --font-bold: "Sora", sans-serif; */
+
+  /* Font Weights */
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
 }
