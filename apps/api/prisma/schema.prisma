@@ -1,0 +1,23 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model PollHistory {
+  id                String   @id @default(cuid())
+  question          String
+  options           Json     // Array of option strings
+  responses         Json     // Object with option_index -> count mapping
+  totalParticipants Int      @map("total_participants")
+  createdAt         DateTime @default(now()) @map("created_at")
+  completedAt       DateTime @default(now()) @map("completed_at")
+
+  @@map("poll_history")
+}
