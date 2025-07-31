@@ -1,9 +1,4 @@
-type Props = {
-  // Define any props needed for PollArea
-  name: string;
-};
-
-const PollArea = (_props: Props) => {
+const PollArea = () => {
   return <div>PollArea</div>;
 };
 
