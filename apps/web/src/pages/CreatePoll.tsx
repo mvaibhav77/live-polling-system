@@ -1,12 +1,18 @@
 import { useNavigate } from "react-router-dom";
 import { usePollCreation } from "../hooks/usePollCreation";
+import { useGetPollStatusQuery } from "../store/api/pollApi";
 import QuestionInput from "../components/QuestionInput";
 import PollOptionsEditor from "../components/PollOptionsEditor";
 import Pill from "../components/Pill";
 import Button from "../components/Button";
 
-function TeacherStarter() {
+function CreatePoll() {
   const navigate = useNavigate();
+
+  // Get current poll status to determine if this is the first question
+  const { data: pollStatus } = useGetPollStatusQuery();
+  const totalQuestionsAsked = pollStatus?.stats?.totalQuestionsAsked || 0;
+  const isFirstQuestion = totalQuestionsAsked === 0;
 
   const {
     question,
@@ -37,13 +43,28 @@ function TeacherStarter() {
             <Pill />
 
             <div className="w-full flex flex-col gap-2">
-              <h1 className="text-5xl font-light tracking-tight">
-                Let's <span className="font-medium">Get Started</span>
-              </h1>
-              <p className="text-gray-600">
-                You'll have the ability to create and manage polls, ask
-                questions, and monitor your students' responses in real-time.
-              </p>
+              {isFirstQuestion ? (
+                <>
+                  <h1 className="text-5xl font-light tracking-tight">
+                    Let's <span className="font-medium">Get Started</span>
+                  </h1>
+                  <p className="text-gray-600">
+                    You'll have the ability to create and manage polls, ask
+                    questions, and monitor your students' responses in
+                    real-time.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h1 className="text-5xl font-light tracking-tight">
+                    <span className="font-medium">Next Question</span>
+                  </h1>
+                  <p className="text-gray-600">
+                    Continue engaging your students with another poll question.
+                    Question #{totalQuestionsAsked + 1}
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
@@ -83,4 +104,4 @@ function TeacherStarter() {
   );
 }
 
-export default TeacherStarter;
+export default CreatePoll;

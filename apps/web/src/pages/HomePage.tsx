@@ -33,7 +33,7 @@ const HomePage: React.FC = () => {
     if (selectedRole === "student") {
       navigate("/student/get-started");
     } else if (selectedRole === "teacher") {
-      navigate("/teacher/get-started");
+      navigate("/teacher/create-poll");
     } else {
       alert("Please select a role to continue.");
     }
