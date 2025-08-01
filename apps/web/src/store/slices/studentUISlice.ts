@@ -1,4 +1,9 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import {
+  loadStudentFromStorage,
+  saveStudentToStorage,
+  clearStudentFromStorage,
+} from "../utils/persistence";
 
 // Types for student UI state
 export interface StudentUIState {
@@ -20,19 +25,32 @@ export interface StudentUIState {
   showResults: boolean;
 }
 
-const initialState: StudentUIState = {
-  currentStudent: {
-    id: null,
-    name: "",
-    hasJoined: false,
-  },
-  selectedAnswer: null,
-  hasSubmittedAnswer: false,
-  joinCode: "",
-  isJoining: false,
-  pollTimeRemaining: null,
-  showResults: false,
+// Load initial state from localStorage if available
+const loadInitialState = (): StudentUIState => {
+  const persistedStudent = loadStudentFromStorage();
+
+  return {
+    currentStudent: persistedStudent
+      ? {
+          id: persistedStudent.id,
+          name: persistedStudent.name,
+          hasJoined: persistedStudent.hasJoined,
+        }
+      : {
+          id: null,
+          name: "",
+          hasJoined: false,
+        },
+    selectedAnswer: null,
+    hasSubmittedAnswer: false,
+    joinCode: "",
+    isJoining: false,
+    pollTimeRemaining: null,
+    showResults: false,
+  };
 };
+
+const initialState: StudentUIState = loadInitialState();
 
 const studentSlice = createSlice({
   name: "student",
@@ -46,6 +64,13 @@ const studentSlice = createSlice({
       state.currentStudent.id = action.payload.id;
       state.currentStudent.name = action.payload.name;
       state.currentStudent.hasJoined = true;
+
+      // Persist to localStorage
+      saveStudentToStorage({
+        id: action.payload.id,
+        name: action.payload.name,
+        hasJoined: true,
+      });
     },
 
     setJoinCode: (state, action: PayloadAction<string>) => {
@@ -94,6 +119,9 @@ const studentSlice = createSlice({
       state.isJoining = false;
       state.pollTimeRemaining = null;
       state.showResults = false;
+
+      // Clear from localStorage
+      clearStudentFromStorage();
     },
   },
 });

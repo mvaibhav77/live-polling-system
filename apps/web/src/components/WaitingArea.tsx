@@ -28,7 +28,7 @@ const WaitingArea: React.FC<WaitingAreaProps> = ({
 
         {/* Main Message */}
         <div className="text-center">
-          <h2 className="text-xl font-medium text-gray-800">
+          <h2 className="text-3xl font-medium text-gray-800">
             Wait for the teacher to ask questions..
           </h2>
           {studentName && (

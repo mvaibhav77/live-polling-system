@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Button from "../components/Button";
 import Pill from "../components/Pill";
 import { useJoinSessionMutation } from "../store/api/pollApi";
-import { setStudentInfo, setIsJoining } from "../store/slices/studentUISlice";
+import {
+  setStudentInfo,
+  setIsJoining,
+  resetStudentState,
+} from "../store/slices/studentUISlice";
+import type { RootState } from "../store/store";
 
 const StudentStarter: React.FC = () => {
   const [name, setName] = useState<string>("");
@@ -12,10 +17,26 @@ const StudentStarter: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
+  // Get current student state
+  const student = useSelector(
+    (state: RootState) => state.studentUI.currentStudent
+  );
+
   // RTK Query hooks
   const [joinSession, { isLoading: isJoiningPoll }] = useJoinSessionMutation();
 
-  // Check if there's an active poll
+  // Check if student is already logged in and redirect
+  useEffect(() => {
+    if (student.hasJoined && student.id && student.name) {
+      navigate("/poll");
+    }
+  }, [student.hasJoined, student.id, student.name, navigate]);
+
+  const handleStartNewSession = () => {
+    dispatch(resetStudentState());
+    setName("");
+    setError("");
+  };
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -57,6 +78,41 @@ const StudentStarter: React.FC = () => {
       setError("");
     }
   }, [name, error]);
+
+  // Show "already logged in" state if student has joined
+  if (student.hasJoined && student.id && student.name) {
+    return (
+      <div className="min-h-screen flex items-center justify-center font-sans p-4">
+        <div className="w-full max-w-4xl mx-auto flex flex-col gap-10 items-center text-center">
+          <Pill />
+
+          <div className="w-full mx-auto flex flex-col gap-4 items-center text-center">
+            <h1 className="text-4xl md:text-5xl font-light tracking-tight">
+              Welcome Back, <span className="font-medium">{student.name}</span>!
+            </h1>
+
+            <p className="text-muted text-lg">
+              You're already logged into the polling session. You can continue
+              to the poll area or start a new session.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            <Button onClick={() => navigate("/poll")} className="px-8">
+              Continue to Poll
+            </Button>
+            <Button
+              onClick={handleStartNewSession}
+              variant="secondary"
+              className="px-8"
+            >
+              Start New Session
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center font-sans p-4">
