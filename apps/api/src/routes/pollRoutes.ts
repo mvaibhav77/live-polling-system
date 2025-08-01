@@ -278,10 +278,46 @@ router.post("/poll/submit", (req: Request, res: Response) => {
         stats,
       });
     } else {
-      res.status(400).json({
-        error:
-          "Cannot submit response. Poll may be inactive, option invalid, or already answered.",
-      });
+      // Get more specific error information
+      const currentPoll = pollSessionManager.getCurrentPoll();
+
+      if (!currentPoll) {
+        res.status(400).json({
+          error:
+            "No active poll exists. Please wait for the teacher to start a new poll.",
+          code: "NO_ACTIVE_POLL",
+        });
+      } else if (currentPoll.status !== "active") {
+        res.status(400).json({
+          error: `Poll is not active (status: ${currentPoll.status}). Cannot submit responses.`,
+          code: "POLL_NOT_ACTIVE",
+        });
+      } else if (optionIndex < 0 || optionIndex >= currentPoll.options.length) {
+        res.status(400).json({
+          error: `Invalid option index ${optionIndex}. Valid range is 0-${currentPoll.options.length - 1}.`,
+          code: "INVALID_OPTION",
+        });
+      } else if (!currentPoll.students.has(studentId)) {
+        res.status(400).json({
+          error:
+            "Student ID not found in current poll. Please rejoin the session.",
+          code: "STUDENT_NOT_FOUND",
+          studentId: studentId,
+        });
+      } else {
+        const student = currentPoll.students.get(studentId);
+        if (student?.hasAnswered) {
+          res.status(400).json({
+            error: "You have already submitted an answer for this poll.",
+            code: "ALREADY_ANSWERED",
+          });
+        } else {
+          res.status(400).json({
+            error: "Cannot submit response. Unknown error occurred.",
+            code: "UNKNOWN_ERROR",
+          });
+        }
+      }
     }
   } catch (error) {
     res.status(500).json({

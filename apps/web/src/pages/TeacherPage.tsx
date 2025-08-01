@@ -151,6 +151,7 @@ function TeacherPage() {
                     <option value={60}>60 seconds</option>
                     <option value={90}>90 seconds</option>
                     <option value={120}>120 seconds</option>
+                    <option value={10000}>Testing Time</option>
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                     <svg

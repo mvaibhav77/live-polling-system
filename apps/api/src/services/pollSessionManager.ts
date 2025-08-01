@@ -31,6 +31,10 @@ class PollSessionManager {
     const sessionStudents = sessionManager.getAllStudents();
     const pollStudents = new Map<string, Student>();
 
+    console.log(
+      `📋 Transferring ${sessionStudents.length} students from session to new poll`
+    );
+
     sessionStudents.forEach((sessionStudent) => {
       const pollStudent: Student = {
         id: sessionStudent.id,
@@ -40,6 +44,9 @@ class PollSessionManager {
         joinedAt: sessionStudent.joinedAt,
       };
       pollStudents.set(sessionStudent.id, pollStudent);
+      console.log(
+        `👤 Added student ${sessionStudent.name} (${sessionStudent.id}) to poll`
+      );
     });
 
     // Increment sequence number for new poll
@@ -69,8 +76,13 @@ class PollSessionManager {
     const sessionStudent = sessionManager.addStudent(socketId, studentName);
 
     if (!sessionStudent) {
+      console.log(`❌ Failed to add student ${studentName} to session`);
       return null;
     }
+
+    console.log(
+      `✅ Student ${sessionStudent.name} added to session with ID: ${sessionStudent.id}`
+    );
 
     // Convert session student to poll student format
     const pollStudent: Student = {
@@ -84,9 +96,51 @@ class PollSessionManager {
     // If there's an active poll, add student to it
     if (this.currentPoll) {
       this.currentPoll.students.set(sessionStudent.id, pollStudent);
+      console.log(
+        `➕ Student ${sessionStudent.name} added to current poll (${this.currentPoll.pollId})`
+      );
+      console.log(`👥 Poll now has ${this.currentPoll.students.size} students`);
+    } else {
+      console.log(
+        `ℹ️ No current poll exists, student will be added when poll is created`
+      );
     }
 
     return pollStudent;
+  }
+
+  // Ensure all session students are in the current poll
+  syncSessionStudentsWithPoll(): void {
+    if (!this.currentPoll) {
+      console.log("⚠️ Cannot sync students: No current poll exists");
+      return;
+    }
+
+    const sessionStudents = sessionManager.getAllStudents();
+    let addedCount = 0;
+
+    sessionStudents.forEach((sessionStudent) => {
+      if (!this.currentPoll!.students.has(sessionStudent.id)) {
+        const pollStudent: Student = {
+          id: sessionStudent.id,
+          name: sessionStudent.name,
+          socketId: sessionStudent.socketId,
+          hasAnswered: false,
+          joinedAt: sessionStudent.joinedAt,
+        };
+        this.currentPoll!.students.set(sessionStudent.id, pollStudent);
+        addedCount++;
+        console.log(`🔄 Synced student ${sessionStudent.name} to current poll`);
+      }
+    });
+
+    if (addedCount > 0) {
+      console.log(
+        `✅ Synced ${addedCount} students to poll. Total students in poll: ${this.currentPoll.students.size}`
+      );
+    } else {
+      console.log("ℹ️ All session students are already in the poll");
+    }
   }
 
   // Start the current poll
@@ -134,16 +188,56 @@ class PollSessionManager {
 
   // Submit a response from a student
   submitResponse(studentId: string, optionIndex: number): boolean {
-    if (!this.currentPoll || this.currentPoll.status !== "active") {
+    console.log(
+      `🔍 Submit attempt: studentId=${studentId}, optionIndex=${optionIndex}`
+    );
+
+    // Ensure all session students are in the current poll before processing submission
+    this.syncSessionStudentsWithPoll();
+
+    if (!this.currentPoll) {
+      console.log("❌ Submit failed: No current poll exists");
+      return false;
+    }
+
+    console.log(
+      `📊 Current poll status: ${this.currentPoll.status}, pollId: ${this.currentPoll.pollId}`
+    );
+    console.log(`👥 Students in poll: ${this.currentPoll.students.size}`);
+    console.log(`📝 Poll options count: ${this.currentPoll.options.length}`);
+
+    if (this.currentPoll.status !== "active") {
+      console.log(
+        `❌ Submit failed: Poll is not active (status: ${this.currentPoll.status})`
+      );
       return false;
     }
 
     if (optionIndex < 0 || optionIndex >= this.currentPoll.options.length) {
+      console.log(
+        `❌ Submit failed: Invalid option index ${optionIndex} (valid range: 0-${this.currentPoll.options.length - 1})`
+      );
       return false;
     }
 
     const student = this.currentPoll.students.get(studentId);
-    if (!student || student.hasAnswered) {
+    console.log(
+      `👤 Student lookup result: ${student ? `found (${student.name})` : "not found"}`
+    );
+
+    if (!student) {
+      console.log(`❌ Submit failed: Student ${studentId} not found in poll`);
+      console.log(
+        `👥 Available students:`,
+        Array.from(this.currentPoll.students.keys())
+      );
+      return false;
+    }
+
+    if (student.hasAnswered) {
+      console.log(
+        `❌ Submit failed: Student ${student.name} has already answered`
+      );
       return false;
     }
 

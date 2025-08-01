@@ -1,5 +1,68 @@
 import { pollSessionManager } from "../services/pollSessionManager";
 
+async function testSubmissionBug() {
+  console.log("🐛 Testing Submission Bug...\n");
+
+  // Clear any existing state
+  pollSessionManager.resetSession();
+
+  // Step 1: Create a poll first (before student joins)
+  console.log("1. Creating poll first...");
+  const poll = pollSessionManager.createPoll(
+    "What is 2 + 2?",
+    ["3", "4", "5", "6"],
+    60
+  );
+  console.log("✅ Poll created:", poll.pollId, "Status:", poll.status);
+
+  // Step 2: Start the poll immediately
+  console.log("\n2. Starting poll...");
+  const started = pollSessionManager.startPoll();
+  console.log("✅ Poll started:", started, "Status:", poll.status);
+
+  // Step 3: Add student AFTER poll is already active (this is the problematic flow)
+  console.log("\n3. Adding student AFTER poll is active...");
+  const student = pollSessionManager.addStudent("socket-123", "TestStudent");
+  console.log("✅ Student added:", student?.id, student?.name);
+
+  // Step 4: Try to submit response (this should fail currently)
+  console.log("\n4. Attempting to submit response...");
+  const studentId = "98792a87-3830-48ee-8c7e-d6c2d51cd123"; // Use the actual failing ID
+  const optionIndex = 0;
+
+  console.log(
+    `📝 Submitting: studentId=${studentId}, optionIndex=${optionIndex}`
+  );
+  const submitResult = pollSessionManager.submitResponse(
+    studentId,
+    optionIndex
+  );
+  console.log("❌ Submit result:", submitResult);
+
+  // Step 5: Let's also try with the correct student ID that was just created
+  console.log("\n5. Trying with correct student ID...");
+  if (student) {
+    const submitResult2 = pollSessionManager.submitResponse(
+      student.id,
+      optionIndex
+    );
+    console.log("✅ Submit result with correct ID:", submitResult2);
+  }
+
+  // Step 6: Check current poll state
+  console.log("\n6. Current poll state:");
+  const currentPoll = pollSessionManager.getCurrentPoll();
+  if (currentPoll) {
+    console.log("   Poll ID:", currentPoll.pollId);
+    console.log("   Status:", currentPoll.status);
+    console.log("   Students in poll:", currentPoll.students.size);
+    console.log("   Student IDs:", Array.from(currentPoll.students.keys()));
+    console.log("   Responses:", currentPoll.responses.size);
+  }
+
+  console.log("\n🔍 Bug reproduction complete!");
+}
+
 async function testSequentialPolls() {
   console.log("🧪 Testing Sequential Poll System...\n");
 
@@ -87,7 +150,7 @@ async function testSequentialPolls() {
 
 // Run tests if this file is executed directly
 if (require.main === module) {
-  testSequentialPolls().catch(console.error);
+  testSubmissionBug().catch(console.error);
 }
 
-export { testSequentialPolls };
+export { testSequentialPolls, testSubmissionBug };
