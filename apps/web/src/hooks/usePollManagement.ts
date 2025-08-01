@@ -28,6 +28,7 @@ export const usePollManagement = () => {
 
   const currentPoll = pollStatusData?.poll || null;
   const pollResults = pollResultsData?.results || {};
+  const pollStats = pollStatusData?.stats || null;
 
   const handleEndPoll = async () => {
     try {
@@ -48,6 +49,7 @@ export const usePollManagement = () => {
   return {
     currentPoll,
     pollResults,
+    pollStats,
     isLoadingStatus,
     isEndingPoll,
     handleEndPoll,

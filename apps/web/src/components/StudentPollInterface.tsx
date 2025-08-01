@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import React from "react";
 import Button from "./Button";
 import Timer from "../assets/timer.svg";
 import PollQuestionCard from "./PollQuestionCard";
+import { useStudentPollTimer } from "../hooks/useStudentPollTimer";
+import { useStudentPollState } from "../hooks/useStudentPollState";
 
 interface StudentPollInterfaceProps {
   poll: {
@@ -32,94 +34,29 @@ const StudentPollInterface: React.FC<StudentPollInterfaceProps> = ({
   pollResults = null,
   showResults = false,
 }) => {
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [timeRemaining, setTimeRemaining] = useState<number>(poll.timeLimit);
-  const [localShowResults, setLocalShowResults] = useState(showResults);
-  const [hasAutoSubmitted, setHasAutoSubmitted] = useState(false);
+  // Use custom hooks for timer and state management
+  const { timeRemaining, formattedTime, isTimeUp, isTimeWarning } =
+    useStudentPollTimer({
+      poll,
+      hasSubmitted,
+      showResults,
+    });
 
-  // Real-time timer countdown
-  useEffect(() => {
-    if (!poll.startTime) {
-      setTimeRemaining(poll.timeLimit);
-      return;
-    }
-
-    const updateTimer = () => {
-      const now = Date.now();
-      const elapsed = Math.floor((now - poll.startTime!) / 1000);
-      const remaining = Math.max(0, poll.timeLimit - elapsed);
-      setTimeRemaining(remaining);
-    };
-
-    // Update immediately
-    updateTimer();
-
-    // Update every second
-    const interval = setInterval(updateTimer, 1000);
-
-    return () => clearInterval(interval);
-  }, [poll.startTime, poll.timeLimit]);
-
-  // Reset selected option when poll changes
-  useEffect(() => {
-    setSelectedOption(null);
-    setHasAutoSubmitted(false);
-  }, [poll.pollId]);
-
-  // Auto-submit when time runs out (if option is selected)
-  useEffect(() => {
-    if (
-      timeRemaining === 0 &&
-      selectedOption !== null &&
-      !hasSubmitted &&
-      !isSubmitting &&
-      !hasAutoSubmitted
-    ) {
-      console.log("⏰ Time's up! Auto-submitting selected answer...");
-      setHasAutoSubmitted(true);
-      onSubmit(selectedOption);
-    }
-  }, [
-    timeRemaining,
+  const {
     selectedOption,
+    localShowResults,
+    isDisabled,
+    canSubmit,
+    handleSubmit,
+    handleOptionSelect,
+  } = useStudentPollState({
+    poll,
+    timeRemaining,
     hasSubmitted,
     isSubmitting,
-    hasAutoSubmitted,
+    showResults,
     onSubmit,
-  ]);
-
-  // Show results when poll is finished or time runs out
-  useEffect(() => {
-    if (
-      hasSubmitted ||
-      timeRemaining === 0 ||
-      poll.status === "ended" ||
-      showResults
-    ) {
-      setLocalShowResults(true);
-    }
-  }, [hasSubmitted, timeRemaining, poll.status, showResults]);
-
-  // Calculate time remaining (this will be enhanced with real-time updates later)
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const handleSubmit = () => {
-    if (
-      selectedOption !== null &&
-      !hasSubmitted &&
-      !isSubmitting &&
-      timeRemaining > 0
-    ) {
-      onSubmit(selectedOption);
-    }
-  };
-
-  const isTimeUp = timeRemaining <= 0;
-  const isDisabled = hasSubmitted || isSubmitting || isTimeUp;
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -133,7 +70,7 @@ const StudentPollInterface: React.FC<StudentPollInterfaceProps> = ({
             {/* timer icon */}
             <img src={Timer} alt="Timer" width={15} height={15} />
             <span className="text-red-500 font-mono pt-0.5 font-medium">
-              {localShowResults ? "00:00" : formatTime(timeRemaining)}
+              {localShowResults ? "00:00" : formattedTime}
             </span>
           </div>
         </div>
@@ -146,7 +83,7 @@ const StudentPollInterface: React.FC<StudentPollInterfaceProps> = ({
           showResults={localShowResults}
           isInteractive={true}
           isStudentChoice={(index) => selectedOption === index}
-          onOptionSelect={setSelectedOption}
+          onOptionSelect={handleOptionSelect}
           isDisabled={isDisabled}
           showPercentages={true}
           showStudentChoice={true}
@@ -178,7 +115,7 @@ const StudentPollInterface: React.FC<StudentPollInterfaceProps> = ({
             </div>
           )}
 
-          {timeRemaining <= 10 && timeRemaining > 0 && !hasSubmitted && (
+          {isTimeWarning && !hasSubmitted && (
             <div className="mb-2 text-center">
               <p className="text-orange-600 text-sm font-medium animate-pulse">
                 ⚠️ Hurry! Only {timeRemaining} second
@@ -197,9 +134,9 @@ const StudentPollInterface: React.FC<StudentPollInterfaceProps> = ({
           ) : (
             <Button
               onClick={handleSubmit}
-              disabled={selectedOption === null || isDisabled}
+              disabled={!canSubmit}
               className={`${
-                selectedOption === null || isDisabled
+                !canSubmit
                   ? "bg-gray-300 cursor-not-allowed"
                   : hasSubmitted
                     ? "bg-green-500 hover:bg-green-600"

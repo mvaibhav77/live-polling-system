@@ -5,16 +5,20 @@ interface PollHeaderProps {
   isActive: boolean;
   timeLeft: number;
   formatTime: (seconds: number) => string;
+  questionNumber?: number;
 }
 
 const PollHeader: React.FC<PollHeaderProps> = ({
   isActive,
   timeLeft,
   formatTime,
+  questionNumber,
 }) => {
   return (
     <div className="flex items-center justify-between">
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Question</h1>
+      <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        Question {questionNumber || 1}
+      </h1>
 
       {/* Timer (only show when poll is active) */}
       {isActive && (
