@@ -7,8 +7,6 @@ import {
   setRoom,
   resetSocket,
 } from "../slices/socketSlice";
-import { setPoll, updatePollResults } from "../slices/pollSlice";
-import type { Poll } from "../slices/pollSlice";
 
 let socket: Socket | null = null;
 
@@ -51,13 +49,48 @@ export const socketMiddleware: Middleware =
         dispatch(setConnected(false));
       });
 
-      // Poll events
+      // Poll events - trigger RTK Query cache invalidation instead of direct state updates
       socket.on("pollStarted", (poll: unknown) => {
-        dispatch(setPoll(poll as Poll));
+        dispatch(
+          setLastMessage({
+            type: "pollStarted",
+            payload: poll,
+            timestamp: Date.now(),
+          })
+        );
+        // RTK Query will handle the actual poll data via automatic refetching
       });
 
       socket.on("pollResults", (results: Record<string, number>) => {
-        dispatch(updatePollResults(results));
+        dispatch(
+          setLastMessage({
+            type: "pollResults",
+            payload: results,
+            timestamp: Date.now(),
+          })
+        );
+        // RTK Query will handle the actual results data via automatic refetching
+      });
+
+      // Student connection events for real-time UI updates
+      socket.on("studentJoined", (student: unknown) => {
+        dispatch(
+          setLastMessage({
+            type: "studentJoined",
+            payload: student,
+            timestamp: Date.now(),
+          })
+        );
+      });
+
+      socket.on("studentLeft", (studentId: string) => {
+        dispatch(
+          setLastMessage({
+            type: "studentLeft",
+            payload: { studentId },
+            timestamp: Date.now(),
+          })
+        );
       });
     }
 

@@ -1,17 +1,62 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import Button from "../components/Button";
 import Pill from "../components/Pill";
-import { useNavigate } from "react-router-dom";
+import { useJoinSessionMutation } from "../store/api/pollApi";
+import { setStudentInfo, setIsJoining } from "../store/slices/studentUISlice";
 
 const StudentStarter: React.FC = () => {
   const [name, setName] = useState<string>("");
+  const [error, setError] = useState<string>("");
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-  const handleSubmit = () => {
-    if (name) {
-      navigate("/poll", { state: { name } });
+  // RTK Query hooks
+  const [joinSession, { isLoading: isJoiningPoll }] = useJoinSessionMutation();
+
+  // Check if there's an active poll
+
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      setError("Please enter your name");
+      return;
+    }
+
+    try {
+      setError("");
+      dispatch(setIsJoining(true));
+
+      // Join the session using RTK Query
+      const result = await joinSession({ studentName: name.trim() }).unwrap();
+
+      // Update Redux state with student info
+      dispatch(
+        setStudentInfo({
+          id: result.student.id,
+          name: result.student.name,
+        })
+      );
+
+      // Navigate to poll area
+      navigate("/poll");
+    } catch (err: unknown) {
+      const errorMessage =
+        err && typeof err === "object" && "data" in err
+          ? (err.data as { error?: string })?.error
+          : "Failed to join poll. Please try again.";
+      setError(errorMessage || "Failed to join poll. Please try again.");
+    } finally {
+      dispatch(setIsJoining(false));
     }
   };
+
+  useEffect(() => {
+    // Clear error when name changes
+    if (error && name.trim()) {
+      setError("");
+    }
+  }, [name, error]);
 
   return (
     <div className="min-h-screen flex items-center justify-center font-sans p-4">
@@ -47,16 +92,29 @@ const StudentStarter: React.FC = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="border text-lg border-gray-300 rounded-lg p-4 w-full"
+            disabled={isJoiningPoll}
+            onKeyPress={(e) => {
+              if (e.key === "Enter") {
+                handleSubmit();
+              }
+            }}
           />
+
+          {/* Error Message */}
+          {error && (
+            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm w-full">
+              {error}
+            </div>
+          )}
 
           {/* Continue Button */}
           <Button
-            className="mt-12"
+            className="mt-6"
             onClick={handleSubmit}
             type="submit"
-            disabled={!name}
+            disabled={!name.trim() || isJoiningPoll}
           >
-            Continue
+            {isJoiningPoll ? "Joining..." : "Join Poll"}
           </Button>
         </div>
       </div>

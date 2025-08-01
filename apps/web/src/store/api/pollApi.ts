@@ -13,15 +13,17 @@ export interface Poll {
   options: string[];
   status: "waiting" | "active" | "ended";
   timeLimit: number;
-  startTime?: string;
-  endTime?: string;
-  createdAt: string;
+  startTime?: number;
+  endTime?: number;
+  createdAt: number;
 }
 
 export interface PollStats {
   totalStudents: number;
   answeredStudents: number;
   totalResponses: number;
+  sessionStudentsCount: number; // Total students in session
+  totalQuestionsAsked: number; // Questions asked so far
 }
 
 export interface PollStatus {
@@ -37,12 +39,23 @@ export interface Student {
   id: string;
   name: string;
   hasAnswered: boolean;
-  joinedAt: string;
+  joinedAt: number;
 }
 
 export interface JoinPollResponse {
   success: boolean;
   student: Student;
+  poll: Poll | null;
+}
+
+export interface JoinSessionResponse {
+  success: boolean;
+  student: Student;
+  session: {
+    sessionId: string;
+    totalStudents: number;
+    connectedStudents: number;
+  };
   poll: Poll | null;
 }
 
@@ -83,6 +96,8 @@ const pollApi = createApi({
         method: "POST",
         body: pollData,
       }),
+      transformResponse: (response: { success: boolean; poll: Poll }) =>
+        response.poll,
       invalidatesTags: ["PollStatus"],
     }),
 
@@ -123,6 +138,12 @@ const pollApi = createApi({
           return { error: createResult.error };
         }
 
+        // Extract the poll from the wrapped response
+        const createData = createResult.data as {
+          success: boolean;
+          poll: Poll;
+        };
+
         // Then start it
         const startResult = await fetchWithBQ({
           url: "/poll/start",
@@ -133,7 +154,7 @@ const pollApi = createApi({
           return { error: startResult.error };
         }
 
-        return { data: createResult.data as Poll };
+        return { data: createData.poll };
       },
       invalidatesTags: ["PollStatus"],
     }),
@@ -151,6 +172,16 @@ const pollApi = createApi({
     getPollStats: builder.query<{ stats: PollStats }, void>({
       query: () => "/poll/stats",
       providesTags: ["PollStats"],
+    }),
+
+    // Join session as student (works regardless of poll status)
+    joinSession: builder.mutation<JoinSessionResponse, JoinPollRequest>({
+      query: (data) => ({
+        url: "/session/join",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["PollStats"],
     }),
 
     // Join poll as student
@@ -184,6 +215,7 @@ export const {
   useCreateAndStartPollMutation,
   useGetPollResultsQuery,
   useGetPollStatsQuery,
+  useJoinSessionMutation,
   useJoinPollMutation,
   useSubmitAnswerMutation,
 } = pollApi;

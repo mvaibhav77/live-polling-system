@@ -5,6 +5,7 @@ import {
   SessionPollHistory,
 } from "../types/poll";
 import { v4 as uuidv4 } from "uuid";
+import { sessionManager } from "./sessionManager";
 
 class PollSessionManager {
   private currentPoll: GlobalPollSession | null = null;
@@ -26,16 +27,20 @@ class PollSessionManager {
       this.savePollToSessionHistory();
     }
 
-    // Preserve existing students but reset their answered status
-    const existingStudents = new Map<string, Student>();
-    if (this.currentPoll) {
-      this.currentPoll.students.forEach((student, studentId) => {
-        existingStudents.set(studentId, {
-          ...student,
-          hasAnswered: false, // Reset for new poll
-        });
-      });
-    }
+    // Get students from session manager and convert to poll students
+    const sessionStudents = sessionManager.getAllStudents();
+    const pollStudents = new Map<string, Student>();
+
+    sessionStudents.forEach((sessionStudent) => {
+      const pollStudent: Student = {
+        id: sessionStudent.id,
+        name: sessionStudent.name,
+        socketId: sessionStudent.socketId,
+        hasAnswered: false, // Reset for new poll
+        joinedAt: sessionStudent.joinedAt,
+      };
+      pollStudents.set(sessionStudent.id, pollStudent);
+    });
 
     // Increment sequence number for new poll
     this.pollSequenceNumber++;
@@ -48,7 +53,7 @@ class PollSessionManager {
       options,
       timeLimit,
       status: "waiting",
-      students: existingStudents, // Keep existing students
+      students: pollStudents, // Keep existing students
       responses: new Map(), // Clear previous responses
       createdAt: Date.now(),
     };
@@ -59,31 +64,29 @@ class PollSessionManager {
     return this.currentPoll;
   }
 
-  // Add a student to the current poll
+  // Add student to session (delegates to session manager)
   addStudent(socketId: string, studentName: string): Student | null {
-    if (!this.currentPoll) {
+    const sessionStudent = sessionManager.addStudent(socketId, studentName);
+
+    if (!sessionStudent) {
       return null;
     }
 
-    // Check if student name already exists
-    for (const student of this.currentPoll.students.values()) {
-      if (student.name === studentName) {
-        return null; // Name already taken
-      }
-    }
-
-    const studentId = this.generateId();
-    const student: Student = {
-      id: studentId,
-      name: studentName,
-      socketId,
+    // Convert session student to poll student format
+    const pollStudent: Student = {
+      id: sessionStudent.id,
+      name: sessionStudent.name,
+      socketId: sessionStudent.socketId,
       hasAnswered: false,
-      joinedAt: Date.now(),
+      joinedAt: sessionStudent.joinedAt,
     };
 
-    this.currentPoll.students.set(studentId, student);
-    console.log(`👨‍🎓 Student joined: ${studentName} (${studentId})`);
-    return student;
+    // If there's an active poll, add student to it
+    if (this.currentPoll) {
+      this.currentPoll.students.set(sessionStudent.id, pollStudent);
+    }
+
+    return pollStudent;
   }
 
   // Start the current poll
@@ -94,6 +97,9 @@ class PollSessionManager {
 
     this.currentPoll.status = "active";
     this.currentPoll.startTime = Date.now();
+
+    // Notify session manager about current poll
+    sessionManager.setCurrentPoll(this.currentPoll.pollId);
 
     // Set timer to auto-end poll
     this.currentPoll.timer = setTimeout(() => {
@@ -118,6 +124,9 @@ class PollSessionManager {
       clearTimeout(this.currentPoll.timer);
       this.currentPoll.timer = undefined;
     }
+
+    // Notify session manager that poll ended
+    sessionManager.setCurrentPoll(null);
 
     console.log(`⏹️ Poll ended: ${this.currentPoll.question}`);
     return true;
@@ -196,45 +205,44 @@ class PollSessionManager {
 
   // Remove a student
   removeStudent(studentId: string): boolean {
-    if (!this.currentPoll) {
-      return false;
+    // Remove from session manager
+    const removed = sessionManager.removeStudent(studentId);
+
+    // Remove from current poll if it exists
+    if (this.currentPoll) {
+      this.currentPoll.students.delete(studentId);
+      this.currentPoll.responses.delete(studentId);
     }
 
-    const student = this.currentPoll.students.get(studentId);
-    if (!student) {
-      return false;
-    }
-
-    // Remove from students and responses
-    this.currentPoll.students.delete(studentId);
-    this.currentPoll.responses.delete(studentId);
-
-    console.log(`❌ Student removed: ${student.name} (${studentId})`);
-    return true;
+    return removed;
   }
 
-  // Get student by socket ID
+  // Get student by socket ID from session
   getStudentBySocketId(socketId: string): Student | null {
-    if (!this.currentPoll) {
+    const sessionStudent = sessionManager.getStudentBySocketId(socketId);
+    if (!sessionStudent) {
       return null;
     }
 
-    for (const student of this.currentPoll.students.values()) {
-      if (student.socketId === socketId) {
-        return student;
-      }
-    }
-
-    return null;
+    // Convert to poll student format
+    return {
+      id: sessionStudent.id,
+      name: sessionStudent.name,
+      socketId: sessionStudent.socketId,
+      hasAnswered: this.currentPoll?.responses.has(sessionStudent.id) || false,
+      joinedAt: sessionStudent.joinedAt,
+    };
   }
 
   // Get statistics
   getStats() {
+    const sessionStats = sessionManager.getSessionStats();
     return {
       hasPoll: !!this.currentPoll,
       pollStatus: this.currentPoll?.status || null,
       currentQuestionNumber: this.currentPoll?.questionNumber || 0,
       studentsCount: this.currentPoll?.students.size || 0,
+      sessionStudentsCount: sessionStats.totalStudents, // Total students in session
       responsesCount: this.currentPoll?.responses.size || 0,
       totalQuestionsAsked: this.pollSequenceNumber,
       completedPolls: this.sessionHistory.length,

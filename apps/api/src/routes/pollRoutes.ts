@@ -1,9 +1,7 @@
 import { Router, Request, Response } from "express";
 import { pollSessionManager } from "../services/pollSessionManager";
-import {
-  CreatePollRequest,
-  JoinPollRequest,
-} from "../types/poll";
+import { sessionManager } from "../services/sessionManager";
+import { CreatePollRequest, JoinPollRequest } from "../types/poll";
 
 const router = Router();
 
@@ -142,6 +140,64 @@ router.get("/poll/results", (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).json({
       error: "Failed to get poll results",
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+// Join session as student (works regardless of poll status)
+router.post("/session/join", (req: Request, res: Response) => {
+  try {
+    const { studentName }: JoinPollRequest = req.body;
+
+    if (!studentName || studentName.trim().length === 0) {
+      return res.status(400).json({
+        error: "Student name is required",
+      });
+    }
+
+    // For REST API, we'll use a placeholder socket ID
+    const socketId = `rest-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const sessionStudent = sessionManager.addStudent(
+      socketId,
+      studentName.trim()
+    );
+
+    if (sessionStudent) {
+      const currentPoll = pollSessionManager.getCurrentPoll();
+      const sessionStats = sessionManager.getSessionStats();
+
+      res.status(201).json({
+        success: true,
+        student: {
+          id: sessionStudent.id,
+          name: sessionStudent.name,
+          hasAnswered: false,
+        },
+        session: {
+          sessionId: sessionStats.sessionId,
+          totalStudents: sessionStats.totalStudents,
+          connectedStudents: sessionStats.connectedStudents,
+        },
+        poll: currentPoll
+          ? {
+              pollId: currentPoll.pollId,
+              question: currentPoll.question,
+              options: currentPoll.options,
+              status: currentPoll.status,
+              timeLimit: currentPoll.timeLimit,
+              startTime: currentPoll.startTime,
+            }
+          : null,
+      });
+    } else {
+      res.status(400).json({
+        error: "Cannot join session. Name may already be taken.",
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      error: "Failed to join session",
       message: error instanceof Error ? error.message : "Unknown error",
     });
   }
