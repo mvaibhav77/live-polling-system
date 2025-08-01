@@ -1,15 +1,18 @@
 import { configureStore } from "@reduxjs/toolkit";
-import pollReducer from "./slices/pollSlice";
-import studentReducer from "./slices/studentSlice";
-import teacherReducer from "./slices/teacherSlice";
+import pollApi from "./api/pollApi";
+import teacherUIReducer from "./slices/teacherUISlice";
+import studentUIReducer from "./slices/studentUISlice";
 import socketReducer from "./slices/socketSlice";
 import { socketMiddleware } from "./middleware/socketMiddleware";
 
 const store = configureStore({
   reducer: {
-    poll: pollReducer,
-    student: studentReducer,
-    teacher: teacherReducer,
+    // RTK Query API
+    [pollApi.reducerPath]: pollApi.reducer,
+
+    // UI state slices
+    teacherUI: teacherUIReducer,
+    studentUI: studentUIReducer,
     socket: socketReducer,
   },
   middleware: (getDefaultMiddleware) =>
@@ -18,7 +21,9 @@ const store = configureStore({
         ignoredActions: ["socket/setLastMessage"],
         ignoredPaths: ["socket.lastMessage"],
       },
-    }).concat(socketMiddleware),
+    })
+      .concat(pollApi.middleware)
+      .concat(socketMiddleware),
 });
 
 export { store };

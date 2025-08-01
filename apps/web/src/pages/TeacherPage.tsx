@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { useAppSelector, useAppDispatch } from "../store/hooks";
-import {
-  createAndStartPoll,
-  type Question,
-} from "../store/slices/teacherSlice";
+import { useAppDispatch } from "../store/hooks";
+import { useCreateAndStartPollMutation } from "../store/api/pollApi";
+import { setCurrentJoinCode } from "../store/slices/teacherUISlice";
 import { socketActions } from "../store/middleware/socketMiddleware";
 import Pill from "../components/Pill";
 import Button from "../components/Button";
@@ -17,8 +15,11 @@ interface PollOption {
 
 function TeacherPage() {
   const dispatch = useAppDispatch();
-  const { isLoading, error } = useAppSelector((state) => state.teacher);
   const navigate = useNavigate();
+
+  // RTK Query mutation
+  const [createAndStartPoll, { isLoading, error }] =
+    useCreateAndStartPollMutation();
 
   const [question, setQuestion] = useState("");
   const [timeLimit, setTimeLimit] = useState(60);
@@ -74,13 +75,6 @@ function TeacherPage() {
       errors.push("At least 2 options are required");
     }
 
-    // const hasCorrectAnswer = options.some(
-    //   (opt) => opt.isCorrect && opt.text.trim()
-    // );
-    // if (!hasCorrectAnswer) {
-    //   errors.push("Please mark at least one option as correct");
-    // }
-
     if (errors.length > 0) {
       setValidationErrors(errors);
       return;
@@ -90,18 +84,23 @@ function TeacherPage() {
       // Connect to socket for real-time features
       dispatch(socketActions.connect());
 
-      // Create poll session and automatically start it
-      const pollData: Question = {
+      // Create and start poll using RTK Query
+      const pollData = {
         question: question.trim(),
         options: validOptions.map((opt) => opt.text.trim()),
-        correctAnswer: validOptions.findIndex((opt) => opt.isCorrect),
         timeLimit: timeLimit,
       };
-      const result = await dispatch(createAndStartPoll(pollData));
 
-      if (createAndStartPoll.fulfilled.match(result)) {
-        // Navigate to teacher dashboard to manage the session
+      const result = await createAndStartPoll(pollData);
+
+      if ("data" in result && result.data) {
+        // Success - store join code and navigate
+        const poll = result.data;
+        dispatch(setCurrentJoinCode(poll.pollId)); // Use pollId as join code
         navigate("/teacher/dashboard");
+      } else {
+        // Error occurred
+        setValidationErrors(["Failed to start poll. Please try again."]);
       }
     } catch (error) {
       console.error("Failed to create and start poll:", error);
@@ -187,7 +186,15 @@ function TeacherPage() {
                     {err}
                   </p>
                 ))}
-                {error && <p className="text-red-600 text-sm">{error}</p>}
+                {error && (
+                  <p className="text-red-600 text-sm">
+                    {"data" in error
+                      ? `Error: ${error.status}`
+                      : "message" in error
+                        ? error.message || "An error occurred"
+                        : "An error occurred"}
+                  </p>
+                )}
               </div>
             )}
           </div>
