@@ -3,7 +3,6 @@ import { pollSessionManager } from "../services/pollSessionManager";
 import {
   CreatePollRequest,
   JoinPollRequest,
-  SubmitResponseRequest,
 } from "../types/poll";
 
 const router = Router();

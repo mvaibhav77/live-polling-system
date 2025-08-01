@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
+import { api } from "../../utils/api";
 
 export interface Poll {
   id: string;
@@ -36,31 +37,28 @@ const initialState: PollState = {
 // Async thunks for API calls
 export const joinPoll = createAsyncThunk(
   "poll/joinPoll",
-  async (pollId: string) => {
-    const response = await fetch(`/api/polls/${pollId}/join`, {
-      method: "POST",
-    });
-    if (!response.ok) {
-      throw new Error("Failed to join poll");
-    }
-    return response.json();
+  async (studentName: string) => {
+    return await api.joinPoll(studentName);
   }
 );
 
 export const submitAnswer = createAsyncThunk(
   "poll/submitAnswer",
-  async ({ pollId, answer }: { pollId: string; answer: number }) => {
-    const response = await fetch(`/api/polls/${pollId}/answer`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ answer }),
-    });
-    if (!response.ok) {
-      throw new Error("Failed to submit answer");
-    }
-    return response.json();
+  async ({
+    studentId,
+    optionIndex,
+  }: {
+    studentId: string;
+    optionIndex: number;
+  }) => {
+    return await api.submitAnswer(studentId, optionIndex);
+  }
+);
+
+export const getPollStatus = createAsyncThunk(
+  "poll/getPollStatus",
+  async () => {
+    return await api.getPollStatus();
   }
 );
 
@@ -117,8 +115,13 @@ const pollSlice = createSlice({
       })
       .addCase(joinPoll.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.currentPoll = action.payload.poll;
-        state.sessionId = action.payload.sessionId;
+        if (action.payload.poll) {
+          state.currentPoll = action.payload.poll;
+        }
+        if (action.payload.student) {
+          // Store student info if needed
+          state.sessionId = action.payload.student.id;
+        }
       })
       .addCase(joinPoll.rejected, (state, action) => {
         state.isLoading = false;
@@ -134,6 +137,11 @@ const pollSlice = createSlice({
       .addCase(submitAnswer.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.error.message || "Failed to submit answer";
+      })
+      .addCase(getPollStatus.fulfilled, (state, action) => {
+        if (action.payload.poll) {
+          state.currentPoll = action.payload.poll;
+        }
       });
   },
 });

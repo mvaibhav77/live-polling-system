@@ -1,6 +1,5 @@
 import type { Middleware } from "@reduxjs/toolkit";
-import { io } from "socket.io-client";
-import type { Socket } from "socket.io-client";
+import { io, type Socket } from "socket.io-client";
 import {
   setConnected,
   setConnectionError,
@@ -91,6 +90,26 @@ export const socketMiddleware: Middleware =
       }
     }
 
+    // Handle teacher poll control actions
+    if (typedAction.type === "socket/startPoll") {
+      const payload = typedAction.payload as {
+        pollId: string;
+        questionIndex: number;
+      };
+      const { pollId, questionIndex } = payload;
+      if (socket?.connected) {
+        socket.emit("startPoll", { pollId, questionIndex });
+      }
+    }
+
+    if (typedAction.type === "socket/endPoll") {
+      const payload = typedAction.payload as { pollId: string };
+      const { pollId } = payload;
+      if (socket?.connected) {
+        socket.emit("endPoll", { pollId });
+      }
+    }
+
     return next(action);
   };
 
@@ -105,5 +124,13 @@ export const socketActions = {
   submitAnswer: (pollId: string, answer: number) => ({
     type: "socket/submitAnswer" as const,
     payload: { pollId, answer },
+  }),
+  startPoll: (pollId: string, questionIndex: number) => ({
+    type: "socket/startPoll" as const,
+    payload: { pollId, questionIndex },
+  }),
+  endPoll: (pollId: string) => ({
+    type: "socket/endPoll" as const,
+    payload: { pollId },
   }),
 };

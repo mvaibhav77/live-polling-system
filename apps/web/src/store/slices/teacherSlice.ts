@@ -1,13 +1,13 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { Student } from "./studentSlice";
+import { api } from "../../utils/api";
 
 export interface Question {
-  id: string;
+  id?: string;
   question: string;
   options: string[];
   correctAnswer?: number;
-  type: "multipleChoice" | "poll";
   timeLimit?: number;
 }
 
@@ -41,69 +41,31 @@ const initialState: TeacherState = {
 };
 
 // Async thunks
-export const createPollSession = createAsyncThunk(
-  "teacher/createPollSession",
-  async (sessionData: { title: string; questions: Question[] }) => {
-    const response = await fetch("/api/polls/create", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(sessionData),
-    });
-    if (!response.ok) {
-      throw new Error("Failed to create poll session");
-    }
-    return response.json();
+export const createAndStartPoll = createAsyncThunk(
+  "teacher/createAndStartPoll",
+  async (questionData: Question) => {
+    // First create the poll
+    const pollData = {
+      question: questionData.question,
+      options: questionData.options,
+      timeLimit: questionData.timeLimit || 60,
+    };
+    const createResult = await api.createPoll(pollData);
+
+    // Then automatically start it
+    await api.startPoll();
+
+    return createResult;
   }
 );
 
-export const startPoll = createAsyncThunk(
-  "teacher/startPoll",
-  async ({
-    sessionId,
-    questionIndex,
-  }: {
-    sessionId: string;
-    questionIndex: number;
-  }) => {
-    const response = await fetch(`/api/polls/${sessionId}/start`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ questionIndex }),
-    });
-    if (!response.ok) {
-      throw new Error("Failed to start poll");
-    }
-    return response.json();
-  }
-);
+export const startPoll = createAsyncThunk("teacher/startPoll", async () => {
+  return await api.startPoll();
+});
 
-export const endPoll = createAsyncThunk(
-  "teacher/endPoll",
-  async (sessionId: string) => {
-    const response = await fetch(`/api/polls/${sessionId}/end`, {
-      method: "POST",
-    });
-    if (!response.ok) {
-      throw new Error("Failed to end poll");
-    }
-    return response.json();
-  }
-);
-
-export const getSessionHistory = createAsyncThunk(
-  "teacher/getSessionHistory",
-  async () => {
-    const response = await fetch("/api/polls/history");
-    if (!response.ok) {
-      throw new Error("Failed to fetch session history");
-    }
-    return response.json();
-  }
-);
+export const endPoll = createAsyncThunk("teacher/endPoll", async () => {
+  return await api.endPoll();
+});
 
 const teacherSlice = createSlice({
   name: "teacher",
@@ -197,17 +159,17 @@ const teacherSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(createPollSession.pending, (state) => {
+      .addCase(createAndStartPoll.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(createPollSession.fulfilled, (state, action) => {
+      .addCase(createAndStartPoll.fulfilled, (state, action) => {
         state.isLoading = false;
         state.currentSession = action.payload;
       })
-      .addCase(createPollSession.rejected, (state, action) => {
+      .addCase(createAndStartPoll.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.error.message || "Failed to create poll session";
+        state.error = action.error.message || "Failed to create and start poll";
       })
       .addCase(startPoll.pending, (state) => {
         state.isLoading = true;
@@ -231,9 +193,6 @@ const teacherSlice = createSlice({
       .addCase(endPoll.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.error.message || "Failed to end poll";
-      })
-      .addCase(getSessionHistory.fulfilled, (state, action) => {
-        state.sessionHistory = action.payload;
       });
   },
 });

@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { useAppSelector } from "../store/hooks";
+import { useAppSelector, useAppDispatch } from "../store/hooks";
+import {
+  createAndStartPoll,
+  type Question,
+} from "../store/slices/teacherSlice";
+import { socketActions } from "../store/middleware/socketMiddleware";
 import Pill from "../components/Pill";
 import Button from "../components/Button";
 import { useNavigate } from "react-router-dom";
@@ -11,7 +16,8 @@ interface PollOption {
 }
 
 function TeacherPage() {
-  const { isLoading } = useAppSelector((state) => state.teacher);
+  const dispatch = useAppDispatch();
+  const { isLoading, error } = useAppSelector((state) => state.teacher);
   const navigate = useNavigate();
 
   const [question, setQuestion] = useState("");
@@ -20,6 +26,7 @@ function TeacherPage() {
     { id: "1", text: "", isCorrect: false },
     { id: "2", text: "", isCorrect: false },
   ]);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const handleOptionChange = (id: string, text: string) => {
     setOptions(
@@ -51,17 +58,55 @@ function TeacherPage() {
     setOptions(options.filter((option) => option.id !== id));
   };
 
-  const handleSubmit = () => {
-    if (!question.trim() || options.some((opt) => !opt.text.trim())) {
+  const handleSubmit = async () => {
+    // Clear previous validation errors
+    setValidationErrors([]);
+
+    // Validation
+    const errors: string[] = [];
+
+    if (!question.trim()) {
+      errors.push("Question is required");
+    }
+
+    const validOptions = options.filter((opt) => opt.text.trim());
+    if (validOptions.length < 2) {
+      errors.push("At least 2 options are required");
+    }
+
+    // const hasCorrectAnswer = options.some(
+    //   (opt) => opt.isCorrect && opt.text.trim()
+    // );
+    // if (!hasCorrectAnswer) {
+    //   errors.push("Please mark at least one option as correct");
+    // }
+
+    if (errors.length > 0) {
+      setValidationErrors(errors);
       return;
     }
 
-    // TODO: Implement poll creation logic
-    console.log({
-      question,
-      timeLimit,
-      options: options.filter((opt) => opt.text.trim()),
-    });
+    try {
+      // Connect to socket for real-time features
+      dispatch(socketActions.connect());
+
+      // Create poll session and automatically start it
+      const pollData: Question = {
+        question: question.trim(),
+        options: validOptions.map((opt) => opt.text.trim()),
+        correctAnswer: validOptions.findIndex((opt) => opt.isCorrect),
+        timeLimit: timeLimit,
+      };
+      const result = await dispatch(createAndStartPoll(pollData));
+
+      if (createAndStartPoll.fulfilled.match(result)) {
+        // Navigate to teacher dashboard to manage the session
+        navigate("/teacher/dashboard");
+      }
+    } catch (error) {
+      console.error("Failed to create and start poll:", error);
+      setValidationErrors(["Failed to start poll. Please try again."]);
+    }
   };
 
   const viewHistory = () => {
@@ -133,6 +178,18 @@ function TeacherPage() {
               placeholder="What is the capital of France?"
               className="w-full h-24 max-h-[250px] p-4 border border-gray-200 bg-background resize focus:ring-2focus:border-transparent"
             />
+
+            {/* Validation Errors */}
+            {(validationErrors.length > 0 || error) && (
+              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                {validationErrors.map((err, index) => (
+                  <p key={index} className="text-red-600 text-sm">
+                    {err}
+                  </p>
+                ))}
+                {error && <p className="text-red-600 text-sm">{error}</p>}
+              </div>
+            )}
           </div>
 
           {/* Options Section */}
@@ -282,7 +339,7 @@ function TeacherPage() {
               options.every((opt) => !opt.text.trim())
             }
           >
-            {isLoading ? "Creating..." : "Ask Question"}
+            {isLoading ? "Starting Poll..." : "Start Poll"}
           </Button>
         </div>
       </div>
