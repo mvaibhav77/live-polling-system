@@ -53,10 +53,10 @@ const PollHistoryPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen overflow-y-scroll max-w-4/5 mx-auto md:py-16 md:px-[15vw] p-4">
+    <div className="h-screen overflow-y-scroll lg:max-w-4/5 md:max-w-5/6 mx-auto md:py-16 lg:px-[15vw] md:px-[10vw] p-4">
       <div className="flex flex-col items-center">
         {/* Header */}
-        <header className="w-full py-4">
+        <header className="w-full pb-4">
           <div className="flex justify-between items-center">
             <h1 className="text-5xl">
               View <span className="font-semibold">Poll History</span>

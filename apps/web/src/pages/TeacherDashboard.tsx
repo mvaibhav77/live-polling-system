@@ -1,107 +1,203 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import TeacherPollInterface from "../components/TeacherPollInterface";
+import PollQuestionCard from "../components/PollQuestionCard";
 import Button from "../components/Button";
-
-// Mock data for demonstration
-const mockCurrentPoll = {
-  pollId: "poll-current",
-  questionNumber: 1,
-  question: "What is your favorite programming language?",
-  options: ["JavaScript", "Python", "Java", "C++"],
-  timeLimit: 60,
-  startTime: Date.now() - 30000, // Started 30 seconds ago
-  status: "active" as const,
-};
-
-const mockPollResults = {
-  "0": 5,
-  "1": 8,
-  "2": 3,
-  "3": 2,
-};
-
-const mockStats = {
-  totalStudents: 20,
-  answeredStudents: 18,
-  totalResponses: 18,
-};
+import {
+  useGetPollStatusQuery,
+  useGetPollResultsQuery,
+  useEndPollMutation,
+} from "../store/api/pollApi";
+import Spinner from "../components/Spinner";
+import View from "../assets/view.svg";
+import Timer from "../assets/timer.svg";
 
 const TeacherDashboard: React.FC = () => {
-  const [currentPoll, setCurrentPoll] = useState<{
-    pollId: string;
-    questionNumber: number;
-    question: string;
-    options: string[];
-    timeLimit: number;
-    startTime: number;
-    status: "waiting" | "active" | "ended";
-  }>(mockCurrentPoll);
-  const [pollResults] = useState(mockPollResults);
-  const [stats] = useState(mockStats);
-  const [isStarting, setIsStarting] = useState(false);
-  const [isEnding, setIsEnding] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number>(0);
 
-  const handleStartPoll = async () => {
-    setIsStarting(true);
-    // Simulate API call
-    setTimeout(() => {
-      setCurrentPoll((prev) => ({
-        ...prev,
-        status: "active",
-        startTime: Date.now(),
-      }));
-      setIsStarting(false);
-    }, 1000);
-  };
+  // API queries
+  const {
+    data: pollStatusData,
+    isLoading: isLoadingStatus,
+    refetch: refetchStatus,
+  } = useGetPollStatusQuery();
+
+  const { data: pollResultsData, refetch: refetchResults } =
+    useGetPollResultsQuery(undefined, {
+      skip: !pollStatusData?.poll || pollStatusData.poll.status !== "active",
+    });
+
+  const [endPoll, { isLoading: isEndingPoll }] = useEndPollMutation();
+
+  const currentPoll = pollStatusData?.poll;
+  const pollResults = pollResultsData?.results || {};
 
   const handleEndPoll = async () => {
-    setIsEnding(true);
-    // Simulate API call
-    setTimeout(() => {
-      setCurrentPoll((prev) => ({
-        ...prev,
-        status: "ended",
-      }));
-      setIsEnding(false);
-    }, 1000);
+    try {
+      await endPoll().unwrap();
+      refetchStatus();
+    } catch (error) {
+      console.error("Failed to end poll:", error);
+    }
   };
 
+  // Timer logic
+  useEffect(() => {
+    if (
+      !currentPoll ||
+      currentPoll.status !== "active" ||
+      !currentPoll.startTime
+    ) {
+      setTimeLeft(0);
+      return;
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const elapsed = Math.floor((now - currentPoll.startTime!) / 1000);
+      const remaining = Math.max(0, currentPoll.timeLimit - elapsed);
+      setTimeLeft(remaining);
+
+      if (remaining === 0) {
+        // Auto-end poll when timer reaches 0 - call the API directly here
+        endPoll()
+          .then(() => refetchStatus())
+          .catch(console.error);
+      }
+    };
+
+    // Update immediately
+    updateTimer();
+
+    // Set up interval
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentPoll, endPoll, refetchStatus]);
+
+  // Refetch results periodically when poll is active
+  useEffect(() => {
+    if (currentPoll?.status === "active") {
+      const interval = setInterval(() => {
+        refetchResults();
+        refetchStatus();
+      }, 2000); // Refetch every 2 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [currentPoll?.status, refetchResults, refetchStatus]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  if (isLoadingStatus) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Spinner size="lg" />
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Teacher Dashboard
-            </h1>
-            <div className="flex items-center gap-4">
-              <Link to="/history">
-                <Button variant="secondary" className="border-gray-300">
-                  View History
-                </Button>
-              </Link>
-              <Button className="bg-primary hover:bg-primary-dark">
-                Create New Poll
-              </Button>
+    <div className="min-h-screen md:py-16 md:px-[15vw] p-4">
+      <div className="max-w-4xl mx-auto h-full">
+        {/* View Poll History Button */}
+        <div className="flex justify-end mb-8">
+          <Link to="/history">
+            <Button className="flex items-center gap-2">
+              <img
+                src={View}
+                alt="View Poll History"
+                className="inline-block w-6 h-6 mr-2 align-middle"
+              />
+              View Poll history
+            </Button>
+          </Link>
+        </div>
+
+        {/* Current Poll Section - Centered */}
+        {currentPoll ? (
+          <div className="flex items-center justify-center md:min-h-[calc(100vh-15rem)]">
+            <div className="space-y-2 w-full">
+              {/* Question Header */}
+              <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  Question
+                </h1>
+
+                {/* Timer (only show when poll is active) */}
+                {currentPoll.status === "active" && (
+                  <div className="flex items-center gap-2">
+                    {/* timer icon */}
+                    <img src={Timer} alt="Timer" width={15} height={15} />
+                    <span className="text-red-500 font-mono pt-0.5 font-medium">
+                      {formatTime(timeLeft)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Poll Question Card */}
+              <PollQuestionCard
+                poll={{
+                  pollId: currentPoll.pollId,
+                  question: currentPoll.question,
+                  options: currentPoll.options,
+                  status: currentPoll.status,
+                }}
+                pollResults={pollResults}
+                showResults={true}
+                isInteractive={false}
+                showPercentages={true}
+                showVoteCounts={true}
+              />
+
+              {/* Action Buttons */}
+              <div className="flex justify-end mt-8">
+                {currentPoll.status === "active" ? (
+                  <Button
+                    onClick={handleEndPoll}
+                    disabled={isEndingPoll}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    {isEndingPoll ? "Ending..." : "End Poll"}
+                  </Button>
+                ) : currentPoll.status === "ended" ? (
+                  <Link to="/teacher/create-poll">
+                    <Button className="bg-primary hover:bg-primary-dark px-8">
+                      + Ask a new question
+                    </Button>
+                  </Link>
+                ) : (
+                  <div className="text-center text-gray-600">
+                    Poll is waiting to be started...
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="py-8">
-        <TeacherPollInterface
-          poll={currentPoll}
-          pollResults={pollResults}
-          stats={stats}
-          onStartPoll={handleStartPoll}
-          onEndPoll={handleEndPoll}
-          isStarting={isStarting}
-          isEnding={isEnding}
-        />
-      </main>
+        ) : (
+          // No current poll - Show create poll option (also centered)
+          <div className="flex items-center justify-center md:min-h-[calc(100vh-15rem)]">
+            <div className="text-center py-16">
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                No Active Poll
+              </h1>
+              <p className="text-gray-600 mb-8">
+                Create a new poll to start engaging with your students
+              </p>
+              <Link to="/teacher/get-started">
+                <Button>+ Ask a new question</Button>
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

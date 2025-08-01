@@ -10,7 +10,7 @@ type ButtonProps = {
 };
 
 const Button = ({ variant = "primary", ...props }: ButtonProps) => {
-  const baseClasses = "transition-colors focus:outline-none";
+  const baseClasses = "transition-colors font-bold focus:outline-none";
   const disabledClasses = props.disabled
     ? "opacity-50 cursor-not-allowed"
     : "cursor-pointer";

@@ -31,9 +31,9 @@ const HomePage: React.FC = () => {
 
   const handleNavigate = () => {
     if (selectedRole === "student") {
-      navigate("/student");
+      navigate("/student/get-started");
     } else if (selectedRole === "teacher") {
-      navigate("/teacher");
+      navigate("/teacher/get-started");
     } else {
       alert("Please select a role to continue.");
     }
