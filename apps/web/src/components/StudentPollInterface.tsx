@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Button from "./Button";
 import Timer from "../assets/timer.svg";
+import PollQuestionCard from "./PollQuestionCard";
 
 interface StudentPollInterfaceProps {
   poll: {
@@ -99,32 +100,6 @@ const StudentPollInterface: React.FC<StudentPollInterfaceProps> = ({
     }
   }, [hasSubmitted, timeRemaining, poll.status, showResults]);
 
-  // Calculate poll result percentages
-  const calculateResultPercentages = () => {
-    if (!pollResults) return [];
-
-    // The pollResults might be nested under responses property or be the responses directly
-    const responses = pollResults?.responses || pollResults;
-
-    // Ensure we have a valid responses object
-    if (!responses || typeof responses !== "object")
-      return poll.options.map(() => 0);
-
-    const total = Object.values(responses as Record<string, number>).reduce(
-      (sum: number, count: number) => sum + count,
-      0
-    );
-    if (total === 0) return poll.options.map(() => 0);
-
-    return poll.options.map((_, index) => {
-      const count =
-        (responses as Record<string, number>)[index.toString()] || 0;
-      return Math.round((count / total) * 100);
-    });
-  };
-
-  const resultPercentages = calculateResultPercentages();
-
   // Calculate time remaining (this will be enhanced with real-time updates later)
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -141,10 +116,6 @@ const StudentPollInterface: React.FC<StudentPollInterfaceProps> = ({
     ) {
       onSubmit(selectedOption);
     }
-  };
-
-  const getOptionLabel = (index: number) => {
-    return String.fromCharCode(65 + index); // A, B, C, D, etc.
   };
 
   const isTimeUp = timeRemaining <= 0;
@@ -168,82 +139,21 @@ const StudentPollInterface: React.FC<StudentPollInterfaceProps> = ({
         </div>
 
         {/* Question Card */}
-        <div className="bg-white flex flex-col gap-6 rounded-xl shadow-lg w-full border-1 border-primary pb-4">
-          {/* Question Header */}
-          <div className="bg-gradient-to-r from-foreground to-neutral-500 text-white p-4 rounded-t-lg">
-            <p className="text-lg font-bold leading-relaxed">{poll.question}</p>
-          </div>
+        <PollQuestionCard
+          poll={poll}
+          pollResults={pollResults}
+          selectedOption={selectedOption}
+          showResults={localShowResults}
+          isInteractive={true}
+          isStudentChoice={(index) => selectedOption === index}
+          onOptionSelect={setSelectedOption}
+          isDisabled={isDisabled}
+          showPercentages={true}
+          showStudentChoice={true}
+        />
 
-          {/* Options */}
-          <div className="space-y-4 px-4 pt-2">
-            {poll.options.map((option, index) => {
-              const isStudentChoice = selectedOption === index;
-              const percentage = resultPercentages[index] || 0;
-
-              return (
-                <div
-                  key={index}
-                  className={`relative p-4 border-2 rounded-lg transition-all ${
-                    localShowResults
-                      ? isStudentChoice
-                        ? "border-primary bg-primary/10" // Highlight student's choice
-                        : "border-gray-200 bg-gray-50"
-                      : selectedOption === index
-                        ? "border-primary bg-purple-50"
-                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                  } ${!localShowResults && !isDisabled ? "cursor-pointer" : ""}`}
-                  onClick={() =>
-                    !localShowResults && !isDisabled && setSelectedOption(index)
-                  }
-                >
-                  {/* Background bar for results */}
-                  {localShowResults && percentage > 0 && (
-                    <div
-                      className="absolute inset-0 bg-primary/20 rounded-lg"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  )}
-
-                  <div className="relative flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div
-                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-semibold mr-4 ${
-                          localShowResults
-                            ? isStudentChoice
-                              ? "border-primary bg-primary text-white"
-                              : "border-gray-400 bg-white text-gray-600"
-                            : selectedOption === index
-                              ? "border-primary bg-primary text-white"
-                              : "border-gray-300 text-gray-500 bg-white"
-                        }`}
-                      >
-                        {getOptionLabel(index)}
-                      </div>
-                      <span className="text-foreground text-base">
-                        {option}
-                      </span>
-                      {localShowResults && isStudentChoice && (
-                        <span className="ml-2 text-primary text-sm font-medium">
-                          (Your choice)
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Show percentage in results view */}
-                    {localShowResults && (
-                      <div className="text-right">
-                        <span className="text-lg font-semibold text-gray-700">
-                          {percentage}%
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Status Messages */}
+        {/* Status Messages */}
+        <div className="mt-4">
           {hasSubmitted && (
             <div className="mb-2 text-center">
               <p className="text-green-600 text-sm">

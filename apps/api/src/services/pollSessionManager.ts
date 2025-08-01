@@ -6,6 +6,7 @@ import {
 } from "../types/poll";
 import { v4 as uuidv4 } from "uuid";
 import { sessionManager } from "./sessionManager";
+import { PollHistoryService } from "./pollHistoryService";
 
 class PollSessionManager {
   private currentPoll: GlobalPollSession | null = null;
@@ -23,8 +24,11 @@ class PollSessionManager {
     timeLimit: number = 60
   ): GlobalPollSession {
     // Save previous poll to session history if it exists and is completed
-    if (this.currentPoll && this.currentPoll.status === "ended") {
-      this.savePollToSessionHistory();
+    if (this.currentPoll && this.currentPoll.status !== "ended") {
+      // Note: This is fire-and-forget for performance, errors are logged
+      this.savePollToSessionHistory().catch((error) =>
+        console.error("Error saving previous poll:", error)
+      );
     }
 
     // Get students from session manager and convert to poll students
@@ -181,6 +185,11 @@ class PollSessionManager {
 
     // Notify session manager that poll ended
     sessionManager.setCurrentPoll(null);
+
+    // Save the completed poll to both session history and persistent storage
+    this.savePollToSessionHistory().catch((error) =>
+      console.error("Error saving completed poll:", error)
+    );
 
     console.log(`⏹️ Poll ended: ${this.currentPoll.question}`);
     return true;
@@ -348,12 +357,15 @@ class PollSessionManager {
     return this.sessionHistory;
   }
 
-  // Save completed poll to session history
-  private savePollToSessionHistory(): void {
+  // Save completed poll to session history and persistent storage
+  private async savePollToSessionHistory(): Promise<void> {
+    console.log("Trying to save completed poll to session history...");
+
     if (!this.currentPoll || this.currentPoll.status !== "ended") return;
 
     const results = this.getPollResults();
     if (results) {
+      // Save to session history (for current session tracking)
       const historyEntry: SessionPollHistory = {
         pollId: this.currentPoll.pollId,
         questionNumber: this.currentPoll.questionNumber,
@@ -367,7 +379,74 @@ class PollSessionManager {
       console.log(
         `📚 Poll saved to session history: Question ${this.currentPoll.questionNumber}`
       );
+
+      // Also save to persistent storage (for history page)
+      try {
+        await PollHistoryService.savePollResult({
+          question: this.currentPoll.question,
+          options: this.currentPoll.options,
+          responses: results.responses,
+          totalParticipants: results.totalStudents,
+        });
+        console.log(
+          `💾 Poll saved to persistent storage: Question ${this.currentPoll.questionNumber}`
+        );
+      } catch (error) {
+        console.error("Failed to save poll to persistent storage:", error);
+      }
     }
+  }
+
+  // Get poll history for the current session
+  getPollHistory() {
+    let historyToProcess = this.sessionHistory;
+
+    const polls = historyToProcess.map((historyItem) => {
+      const totalResponses = Object.values(
+        historyItem.results.responses || {}
+      ).reduce((sum, count) => sum + count, 0);
+
+      return {
+        pollId: historyItem.pollId,
+        questionNumber: historyItem.questionNumber,
+        question: historyItem.question,
+        options: historyItem.options,
+        status: "ended" as const,
+        createdAt: historyItem.completedAt - 60000, // Assume 1 minute duration for now
+        endedAt: historyItem.completedAt,
+        startTime: historyItem.completedAt - 60000,
+        timeLimit: 60, // Default time limit
+        results: historyItem.results.responses || {},
+        totalStudents: historyItem.results.totalStudents || 0,
+        totalResponses: historyItem.results.totalResponses || totalResponses,
+      };
+    });
+
+    const totalPolls = polls.length;
+    const totalResponses = polls.reduce(
+      (sum, poll) => sum + poll.totalResponses,
+      0
+    );
+
+    const averageResponseRate =
+      totalPolls > 0
+        ? Math.round(
+            polls.reduce((sum, poll) => {
+              const rate =
+                poll.totalStudents > 0
+                  ? (poll.totalResponses / poll.totalStudents) * 100
+                  : 0;
+              return sum + rate;
+            }, 0) / totalPolls
+          )
+        : 0;
+
+    return {
+      polls,
+      totalPolls,
+      totalResponses,
+      averageResponseRate,
+    };
   }
 
   // Reset entire session (for new teaching session)

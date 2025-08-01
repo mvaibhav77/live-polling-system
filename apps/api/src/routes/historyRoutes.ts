@@ -4,7 +4,7 @@ import { PollHistoryService } from "../services/pollHistoryService";
 const router = Router();
 
 // Get all poll history
-router.get("/history", async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 50;
     const polls = await PollHistoryService.getAllPollHistory(limit);

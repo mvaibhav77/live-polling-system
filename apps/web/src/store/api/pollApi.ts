@@ -75,6 +75,24 @@ export interface SubmitAnswerResponse {
   stats: PollStats;
 }
 
+export interface PollHistoryItem {
+  id: string;
+  question: string;
+  options: string[];
+  responses: {
+    [optionIndex: string]: number;
+  };
+  totalParticipants: number;
+  createdAt: string; // ISO date string from database
+  completedAt: string; // ISO date string from database
+}
+
+export interface PollHistoryResponse {
+  polls: PollHistoryItem[];
+  total: number;
+  message?: string;
+}
+
 // Base API configuration
 const pollApi = createApi({
   reducerPath: "pollApi",
@@ -174,6 +192,12 @@ const pollApi = createApi({
       providesTags: ["PollStats"],
     }),
 
+    // Get poll history
+    getPollHistory: builder.query<PollHistoryResponse, void>({
+      query: () => "/history",
+      providesTags: ["Poll"],
+    }),
+
     // Join session as student (works regardless of poll status)
     joinSession: builder.mutation<JoinSessionResponse, JoinPollRequest>({
       query: (data) => ({
@@ -215,6 +239,7 @@ export const {
   useCreateAndStartPollMutation,
   useGetPollResultsQuery,
   useGetPollStatsQuery,
+  useGetPollHistoryQuery,
   useJoinSessionMutation,
   useJoinPollMutation,
   useSubmitAnswerMutation,

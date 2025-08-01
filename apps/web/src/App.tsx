@@ -5,8 +5,8 @@ import HomePage from "./pages/HomePage";
 import TeacherPage from "./pages/TeacherPage";
 import StudentStarter from "./pages/StudentStarter";
 import PollArea from "./pages/PollArea";
-import PollHistory from "./pages/PollHistory";
 import TeacherDashboard from "./pages/TeacherDashboard";
+import PollHistoryPage from "./pages/PollHistoryPage";
 
 function App() {
   return (
@@ -19,7 +19,7 @@ function App() {
             <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
             <Route path="/student" element={<StudentStarter />} />
             <Route path="/poll" element={<PollArea />} />
-            <Route path="/history" element={<PollHistory />} />
+            <Route path="/history" element={<PollHistoryPage />} />
           </Routes>
         </div>
       </BrowserRouter>
