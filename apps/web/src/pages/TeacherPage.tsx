@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAppSelector } from "../store/hooks";
 import Pill from "../components/Pill";
 import Button from "../components/Button";
+import { useNavigate } from "react-router-dom";
 
 interface PollOption {
   id: string;
@@ -11,6 +12,7 @@ interface PollOption {
 
 function TeacherPage() {
   const { isLoading } = useAppSelector((state) => state.teacher);
+  const navigate = useNavigate();
 
   const [question, setQuestion] = useState("");
   const [timeLimit, setTimeLimit] = useState(60);
@@ -60,6 +62,10 @@ function TeacherPage() {
       timeLimit,
       options: options.filter((opt) => opt.text.trim()),
     });
+  };
+
+  const viewHistory = () => {
+    navigate("/history");
   };
 
   return (
@@ -261,10 +267,13 @@ function TeacherPage() {
         </div>
       </div>
 
-      {/* Submit Button */}
+      {/* Footer Buttons */}
       <div className="footer">
         <hr className="text-muted " />
-        <div className="flex justify-end py-4 px-4 md:px-[10vw]">
+        <div className="flex justify-between py-4 px-4 md:px-[10vw]">
+          <Button variant="secondary" onClick={viewHistory}>
+            View History
+          </Button>
           <Button
             onClick={handleSubmit}
             disabled={

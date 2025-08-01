@@ -5,6 +5,7 @@ import HomePage from "./pages/HomePage";
 import TeacherPage from "./pages/TeacherPage";
 import StudentStarter from "./pages/StudentStarter";
 import PollArea from "./pages/PollArea";
+import PollHistory from "./pages/PollHistory";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
             <Route path="/teacher" element={<TeacherPage />} />
             <Route path="/student" element={<StudentStarter />} />
             <Route path="/poll" element={<PollArea />} />
+            <Route path="/history" element={<PollHistory />} />
           </Routes>
         </div>
       </BrowserRouter>
