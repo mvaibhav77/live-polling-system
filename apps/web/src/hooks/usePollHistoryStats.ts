@@ -1,4 +1,4 @@
-import type { PollHistoryItem } from "../store/api/pollApi";
+import type { PollHistoryItem } from "../services/pollHistoryService";
 
 export const usePollHistoryStats = (pollHistory: PollHistoryItem[]) => {
   const totalPolls = pollHistory.length;

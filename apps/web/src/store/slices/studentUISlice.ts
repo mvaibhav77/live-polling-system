@@ -12,11 +12,12 @@ export interface StudentUIState {
     id: string | null;
     name: string;
     hasJoined: boolean;
+    hasAnswered: boolean; // Track from server
   };
 
   // UI state
   selectedAnswer: number | null;
-  hasSubmittedAnswer: boolean;
+  hasSubmittedAnswer: boolean; // Keep for UI feedback, but use hasAnswered for logic
   joinCode: string;
   isJoining: boolean;
 
@@ -35,11 +36,13 @@ const loadInitialState = (): StudentUIState => {
           id: persistedStudent.id,
           name: persistedStudent.name,
           hasJoined: persistedStudent.hasJoined,
+          hasAnswered: false, // Always reset this from server
         }
       : {
           id: null,
           name: "",
           hasJoined: false,
+          hasAnswered: false,
         },
     selectedAnswer: null,
     hasSubmittedAnswer: false,
@@ -104,6 +107,12 @@ const studentSlice = createSlice({
       state.selectedAnswer = null;
       state.hasSubmittedAnswer = false;
       state.showResults = false;
+      state.currentStudent.hasAnswered = false; // Reset server status too
+    },
+
+    // Update hasAnswered status from server
+    setHasAnswered: (state, action: PayloadAction<boolean>) => {
+      state.currentStudent.hasAnswered = action.payload;
     },
 
     // Complete reset
@@ -112,6 +121,7 @@ const studentSlice = createSlice({
         id: null,
         name: "",
         hasJoined: false,
+        hasAnswered: false,
       };
       state.selectedAnswer = null;
       state.hasSubmittedAnswer = false;
@@ -135,6 +145,7 @@ export const {
   setPollTimeRemaining,
   setShowResults,
   resetAnswerState,
+  setHasAnswered,
   resetStudentState,
 } = studentSlice.actions;
 

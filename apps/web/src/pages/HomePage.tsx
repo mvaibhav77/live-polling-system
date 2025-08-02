@@ -1,6 +1,6 @@
 import { useState } from "react";
-import Button from "../components/Button";
-import Pill from "../components/Pill";
+import Button from "../components/common/Button";
+import Pill from "../components/common/Pill";
 import { useNavigate } from "react-router-dom";
 
 type SelectionCardProps = {

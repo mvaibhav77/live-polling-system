@@ -1,34 +1,130 @@
 import { useNavigate } from "react-router-dom";
-import { usePollCreation } from "../hooks/usePollCreation";
-import { useGetPollStatusQuery } from "../store/api/pollApi";
-import QuestionInput from "../components/QuestionInput";
-import PollOptionsEditor from "../components/PollOptionsEditor";
-import Pill from "../components/Pill";
-import Button from "../components/Button";
+import { useState, useEffect } from "react";
+import { useWebSocket, useTeacher } from "../hooks/useWebSocket";
+import QuestionInput from "../components/poll/QuestionInput";
+import PollOptionsEditor from "../components/poll/PollOptionsEditor";
+import Pill from "../components/common/Pill";
+import Button from "../components/common/Button";
+
+interface PollOption {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+}
 
 function CreatePoll() {
   const navigate = useNavigate();
+  const { connect, isConnected } = useWebSocket();
+  const { currentPoll, pollStats, error, joinAsTeacher, createPoll } =
+    useTeacher();
 
-  // Get current poll status to determine if this is the first question
-  const { data: pollStatus } = useGetPollStatusQuery();
-  const totalQuestionsAsked = pollStatus?.stats?.totalQuestionsAsked || 0;
+  // Form state
+  const [question, setQuestion] = useState("");
+  const [timeLimit, setTimeLimit] = useState(60);
+  const [options, setOptions] = useState<PollOption[]>([
+    { id: "1", text: "", isCorrect: false },
+    { id: "2", text: "", isCorrect: false },
+  ]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Connect to WebSocket and join as teacher
+  useEffect(() => {
+    if (!isConnected) {
+      connect();
+    }
+  }, [connect, isConnected]);
+
+  useEffect(() => {
+    if (isConnected) {
+      joinAsTeacher();
+    }
+  }, [isConnected, joinAsTeacher]);
+
+  // Navigate to dashboard when poll is created and started
+  useEffect(() => {
+    if (currentPoll?.status === "active") {
+      navigate("/teacher/dashboard");
+    }
+  }, [currentPoll, navigate]);
+
+  const totalQuestionsAsked = pollStats?.totalQuestionsAsked || 0;
   const isFirstQuestion = totalQuestionsAsked === 0;
 
-  const {
-    question,
-    timeLimit,
-    options,
-    validationErrors,
-    isLoading,
-    setQuestion,
-    setTimeLimit,
-    handleOptionChange,
-    handleCorrectAnswerChange,
-    addMoreOption,
-    deleteOption,
-    handleSubmit,
-    isFormValid,
-  } = usePollCreation();
+  const handleOptionChange = (id: string, text: string) => {
+    setOptions(options.map((opt) => (opt.id === id ? { ...opt, text } : opt)));
+  };
+
+  const handleCorrectAnswerChange = (id: string, isCorrect: boolean) => {
+    setOptions(
+      options.map((opt) => ({
+        ...opt,
+        isCorrect: opt.id === id ? isCorrect : false,
+      }))
+    );
+  };
+
+  const addMoreOption = () => {
+    const newId = (options.length + 1).toString();
+    setOptions([...options, { id: newId, text: "", isCorrect: false }]);
+  };
+
+  const deleteOption = (id: string) => {
+    if (options.length > 2) {
+      setOptions(options.filter((opt) => opt.id !== id));
+    }
+  };
+
+  const validateForm = () => {
+    const errors: string[] = [];
+
+    if (!question.trim()) {
+      errors.push("Question is required");
+    }
+
+    const validOptions = options.filter((opt) => opt.text.trim());
+    if (validOptions.length < 2) {
+      errors.push("At least 2 options are required");
+    }
+
+    if (timeLimit < 10 || timeLimit > 300) {
+      errors.push("Time limit must be between 10 and 300 seconds");
+    }
+
+    setValidationErrors(errors);
+    return errors.length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm() || !isConnected) return;
+
+    try {
+      setIsLoading(true);
+
+      // Create poll with only the text of options
+      const optionTexts = options
+        .filter((opt) => opt.text.trim())
+        .map((opt) => opt.text.trim());
+
+      // Create the poll via WebSocket
+      createPoll(question.trim(), optionTexts, timeLimit);
+
+      // Poll will be auto-started and we'll navigate via useEffect
+    } catch (error) {
+      console.error("Error creating poll:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const isFormValid = () => {
+    return (
+      question.trim() &&
+      options.filter((opt) => opt.text.trim()).length >= 2 &&
+      timeLimit >= 10 &&
+      timeLimit <= 300
+    );
+  };
 
   const viewHistory = () => {
     navigate("/history");
@@ -50,8 +146,8 @@ function CreatePoll() {
                   </h1>
                   <p className="text-gray-600">
                     You'll have the ability to create and manage polls, ask
-                    questions, and monitor your students' responses in
-                    real-time.
+                    questions, and monitor your students' responses in real-time
+                    via WebSocket.
                   </p>
                 </>
               ) : (
@@ -66,6 +162,34 @@ function CreatePoll() {
                 </>
               )}
             </div>
+
+            {/* Connection Status */}
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
+              ></div>
+              <span className="text-sm text-gray-600">
+                {isConnected ? "Connected to server" : "Connecting..."}
+              </span>
+            </div>
+
+            {/* Show errors */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-800 text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* Show validation errors */}
+            {validationErrors.length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <ul className="text-red-800 text-sm">
+                  {validationErrors.map((error, index) => (
+                    <li key={index}>• {error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* Question Input */}
@@ -95,8 +219,11 @@ function CreatePoll() {
           <Button variant="secondary" onClick={viewHistory}>
             View History
           </Button>
-          <Button onClick={handleSubmit} disabled={isLoading || !isFormValid()}>
-            {isLoading ? "Starting Poll..." : "Start Poll"}
+          <Button
+            onClick={handleSubmit}
+            disabled={isLoading || !isFormValid() || !isConnected}
+          >
+            {isLoading ? "Creating Poll..." : "Create & Start Poll"}
           </Button>
         </div>
       </div>

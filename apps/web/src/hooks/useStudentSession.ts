@@ -2,197 +2,167 @@ import { useState, useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import type { RootState } from "../store/store";
-import {
-  useGetPollStatusQuery,
-  useSubmitAnswerMutation,
-  useGetPollResultsQuery,
-} from "../store/api/pollApi";
-import { resetStudentState } from "../store/slices/studentUISlice";
-import { socketActions } from "../store/middleware/socketMiddleware";
+import { useStudent, useWebSocket } from "./useWebSocket";
+import { resetAnswerState } from "../store/slices/studentUISlice";
 
 export const useStudentSession = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Get student from studentUI slice
   const student = useSelector(
     (state: RootState) => state.studentUI.currentStudent
   );
 
+  // Use server's hasAnswered status instead of local hasSubmitted
+  const hasSubmitted = student.hasAnswered;
+
+  // Get poll results from poll slice
+  const pollResults = useSelector((state: RootState) => state.poll.pollResults);
+
+  // Use WebSocket hooks
+  const { connect, disconnect, isConnected } = useWebSocket();
+  const { currentPoll, error, joinAsStudent, submitAnswer } = useStudent();
+
   // Connect to WebSocket when student session starts
   useEffect(() => {
-    if (student.hasJoined && student.id && student.name) {
+    if (student.hasJoined && student.name && !isConnected) {
       console.log(
         "🔌 Student connecting to WebSocket for real-time updates:",
         student.name
       );
-      dispatch(socketActions.connect());
-
-      // Join the WebSocket session for real-time updates
-      // This is separate from the REST API join and enables real-time poll updates
-      dispatch(socketActions.joinStudent(student.name));
+      connect();
     }
+  }, [student.hasJoined, student.name, isConnected, connect]);
 
-    // Cleanup on unmount
-    return () => {
-      dispatch(socketActions.disconnect());
-    };
-  }, [dispatch, student.hasJoined, student.id, student.name]);
-
-  const { data: pollStatus, error: pollStatusError } = useGetPollStatusQuery(
-    undefined,
-    {
-      // No polling - WebSocket handles real-time updates via cache invalidation
-      refetchOnFocus: true,
-      refetchOnReconnect: true,
-    }
-  );
-
-  const [submitAnswer, { isLoading: isSubmitting }] = useSubmitAnswerMutation();
-
-  // Fetch poll results when poll is ended or student has submitted
-  const shouldFetchResults =
-    hasSubmitted || pollStatus?.poll?.status === "ended";
-  const { data: pollResultsData } = useGetPollResultsQuery(undefined, {
-    skip: !shouldFetchResults,
-    // No polling - WebSocket handles real-time updates via cache invalidation
-  });
-
-  // Handle API errors that might indicate invalid session
+  // Join as student when connected
   useEffect(() => {
-    if (pollStatusError && "status" in pollStatusError) {
-      if (pollStatusError.status === 401 || pollStatusError.status === 403) {
-        console.log("Session appears to be invalid, clearing local state");
-        dispatch(resetStudentState());
-        navigate("/student/get-started");
-      }
+    if (isConnected && student.hasJoined && student.name) {
+      joinAsStudent(student.name);
     }
-  }, [pollStatusError, dispatch, navigate]);
+  }, [isConnected, student.hasJoined, student.name, joinAsStudent]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      disconnect();
+    };
+  }, [disconnect]);
 
   // Initialize and check student state after a brief delay to allow persistence to load
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitializing(false);
-    }, 100); // Brief delay to ensure persistence has loaded
-
+    }, 100);
     return () => clearTimeout(timer);
   }, []);
 
-  // Reset hasSubmitted when poll changes
+  // Reset hasAnswered when poll changes (let server handle this)
   useEffect(() => {
-    if (pollStatus?.poll?.pollId) {
-      setHasSubmitted(false);
+    if (currentPoll?.pollId) {
+      // Reset the local state when a new poll arrives
+      dispatch(resetAnswerState());
     }
-  }, [pollStatus?.poll?.pollId]);
+  }, [currentPoll?.pollId, dispatch]);
+
+  // Handle WebSocket errors
+  useEffect(() => {
+    if (error) {
+      console.error("WebSocket error:", error);
+      // Could add error handling UI here
+    }
+  }, [error]);
 
   // Submit answer handler
   const handleSubmitAnswer = useCallback(
     async (selectedOptionIndex: number) => {
-      if (hasSubmitted || isSubmitting || !student.id) {
+      if (hasSubmitted || isSubmitting || !student.name || !currentPoll) {
         console.log("⚠️ Submit blocked:", {
           hasSubmitted,
           isSubmitting,
-          studentId: student.id,
+          studentName: student.name,
+          pollExists: !!currentPoll,
         });
         return;
       }
 
       console.log("🚀 Submitting answer:", {
-        studentId: student.id,
-        optionIndex: selectedOptionIndex,
         studentName: student.name,
-        pollId: pollStatus?.poll?.pollId,
-        pollStatus: pollStatus?.poll?.status,
+        optionIndex: selectedOptionIndex,
+        pollId: currentPoll.pollId,
+        pollStatus: currentPoll.status,
       });
 
       try {
-        const result = await submitAnswer({
-          studentId: student.id,
-          optionIndex: selectedOptionIndex,
-        });
+        setIsSubmitting(true);
 
-        console.log("📥 Submit response:", result);
+        // Submit via WebSocket
+        submitAnswer(selectedOptionIndex);
+        // Don't set hasSubmitted here - let the server update it
+        // dispatch(setHasAnswered(true));
 
-        if ("data" in result && result.data?.success) {
-          setHasSubmitted(true);
-
-          // Also emit WebSocket event for real-time updates
-          dispatch(socketActions.submitAnswer(selectedOptionIndex));
-
-          console.log(
-            `✅ Answer submitted: ${student.name} selected option ${selectedOptionIndex}: ${pollStatus?.poll?.options[selectedOptionIndex]}`
-          );
-        } else if ("error" in result) {
-          console.error("❌ Failed to submit answer:", result.error);
-
-          // Check if it's a session-related error
-          if (result.error && "status" in result.error) {
-            const status = result.error.status;
-
-            // Check for specific error codes that indicate student ID issues
-            if (
-              result.error.data &&
-              typeof result.error.data === "object" &&
-              "code" in result.error.data
-            ) {
-              const errorData = result.error.data as { code?: string };
-              if (errorData.code === "STUDENT_NOT_FOUND") {
-                console.log(
-                  "Student ID not found in poll, clearing local state and redirecting"
-                );
-                dispatch(resetStudentState());
-                navigate("/student/get-started");
-                return;
-              }
-            }
-
-            // General status code checks for session errors
-            if (
-              status === 400 ||
-              status === 401 ||
-              status === 403 ||
-              status === 404
-            ) {
-              console.log(
-                "Session error during submission (student ID invalid or session expired), clearing local state"
-              );
-              dispatch(resetStudentState());
-              navigate("/student");
-              return;
-            }
-          }
-
-          // Could add error handling UI here for other errors
-        }
+        console.log(
+          `✅ Answer submitted: ${student.name} selected option ${selectedOptionIndex}: ${currentPoll.options[selectedOptionIndex]}`
+        );
       } catch (error) {
         console.error("💥 Error submitting answer:", error);
-        // Could add error handling UI here
+        // Don't reset hasSubmitted on error - server will handle the state
+      } finally {
+        setIsSubmitting(false);
       }
     },
-    [
-      hasSubmitted,
-      isSubmitting,
-      student.id,
-      student.name,
-      submitAnswer,
-      pollStatus?.poll?.options,
-      pollStatus?.poll?.pollId,
-      pollStatus?.poll?.status,
-      dispatch,
-      navigate,
-    ]
+    [hasSubmitted, isSubmitting, student.name, currentPoll, submitAnswer]
   );
 
   // Redirect if student hasn't joined (only after initialization)
   useEffect(() => {
-    if (!isInitializing && (!student.hasJoined || !student.id)) {
+    if (!isInitializing && (!student.hasJoined || !student.name)) {
       console.log(
         "Student not found or hasn't joined, redirecting to /student"
       );
       navigate("/student/get-started");
     }
-  }, [student.hasJoined, student.id, navigate, isInitializing]);
+  }, [student.hasJoined, student.name, navigate, isInitializing]);
+
+  // Get poll stats from poll slice for waiting area
+  const pollStats = useSelector((state: RootState) => state.poll.pollStats);
+
+  // Create compatible pollStatus object for existing components
+  const pollStatus = currentPoll
+    ? {
+        poll: currentPoll,
+        stats: {
+          currentQuestionNumber: pollStats?.currentQuestionNumber || 1,
+          totalQuestionsAsked: pollStats?.totalQuestionsAsked || 1,
+          sessionStudentsCount: pollStats?.sessionStudentsCount || 0,
+        },
+      }
+    : pollStats
+      ? {
+          poll: null,
+          stats: {
+            currentQuestionNumber: pollStats.currentQuestionNumber,
+            totalQuestionsAsked: pollStats.totalQuestionsAsked,
+            sessionStudentsCount: pollStats.sessionStudentsCount,
+          },
+        }
+      : {
+          poll: null,
+          stats: {
+            currentQuestionNumber: 0,
+            totalQuestionsAsked: 0,
+            sessionStudentsCount: 0,
+          },
+        };
+
+  // Create compatible pollResultsData object
+  const pollResultsData = pollResults
+    ? {
+        results: pollResults,
+      }
+    : null;
 
   return {
     student,
@@ -202,5 +172,7 @@ export const useStudentSession = () => {
     isSubmitting,
     isInitializing,
     handleSubmitAnswer,
+    isConnected,
+    error,
   };
 };

@@ -1,4 +1,4 @@
-import aiIcon from "../assets/ai.svg";
+import aiIcon from "../../assets/ai.svg";
 
 type Props = {
   className?: string;

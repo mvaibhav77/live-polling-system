@@ -1,44 +1,36 @@
 import { useState, useEffect } from "react";
 
-interface UseStudentPollTimerProps {
+interface UseTeacherPollTimerProps {
   poll: {
     pollId: string;
     timeLimit: number;
     startTime?: number;
     status?: "waiting" | "active" | "ended";
-  };
-  hasSubmitted: boolean;
-  showResults: boolean;
+  } | null;
 }
 
-export const useStudentPollTimer = ({
-  poll,
-  hasSubmitted,
-  showResults,
-}: UseStudentPollTimerProps) => {
-  const [timeRemaining, setTimeRemaining] = useState<number>(poll.timeLimit);
+export const useTeacherPollTimer = ({ poll }: UseTeacherPollTimerProps) => {
+  const [timeRemaining, setTimeRemaining] = useState<number>(
+    poll?.timeLimit || 0
+  );
 
   // Real-time timer countdown
   useEffect(() => {
+    if (!poll) {
+      setTimeRemaining(0);
+      return;
+    }
+
     // Debug logging
-    console.log("🔍 Timer useEffect:", {
+    console.log("🔍 Teacher timer useEffect:", {
       pollId: poll.pollId,
       startTime: poll.startTime,
       timeLimit: poll.timeLimit,
       status: poll.status,
-      hasSubmitted,
-      showResults,
     });
 
-    if (
-      !poll.startTime ||
-      hasSubmitted ||
-      showResults ||
-      poll.status !== "active"
-    ) {
-      console.log(
-        "⏹️ Timer stopped - no startTime, hasSubmitted, showResults, or poll not active"
-      );
+    if (!poll.startTime || poll.status !== "active") {
+      console.log("⏹️ Timer stopped - no startTime or poll not active");
       setTimeRemaining(poll.timeLimit);
       return;
     }
@@ -51,7 +43,7 @@ export const useStudentPollTimer = ({
 
       // Debug every 10 seconds
       if (elapsed % 10 === 0) {
-        console.log("⏰ Timer update:", {
+        console.log("⏰ Teacher timer update:", {
           elapsed,
           remaining,
           timeLimit: poll.timeLimit,
@@ -66,24 +58,19 @@ export const useStudentPollTimer = ({
     const interval = setInterval(updateTimer, 1000);
 
     return () => clearInterval(interval);
-  }, [
-    poll.startTime,
-    poll.timeLimit,
-    poll.pollId,
-    poll.status,
-    hasSubmitted,
-    showResults,
-  ]);
+  }, [poll]);
 
   // Reset timer when poll changes
   useEffect(() => {
-    setTimeRemaining(poll.timeLimit);
-  }, [poll.pollId, poll.timeLimit]);
+    if (poll) {
+      setTimeRemaining(poll.timeLimit);
+    }
+  }, [poll]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const isTimeUp = timeRemaining <= 0;

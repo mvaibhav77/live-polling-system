@@ -1,5 +1,5 @@
-import Pill from "./Pill";
-import Spinner from "./Spinner";
+import Pill from "../common/Pill";
+import Spinner from "../common/Spinner";
 
 interface WaitingAreaProps {
   studentName?: string;

@@ -1,9 +1,9 @@
 import React from "react";
-import Button from "./Button";
-import Timer from "../assets/timer.svg";
-import PollQuestionCard from "./PollQuestionCard";
-import { useStudentPollTimer } from "../hooks/useStudentPollTimer";
-import { useStudentPollState } from "../hooks/useStudentPollState";
+import Button from "../common/Button";
+import Timer from "../../assets/timer.svg";
+import PollQuestionCard from "../poll/PollQuestionCard";
+import { useStudentPollTimer } from "../../hooks/useStudentPollTimer";
+import { useStudentPollState } from "../../hooks/useStudentPollState";
 
 interface StudentPollInterfaceProps {
   poll: {
@@ -126,31 +126,33 @@ const StudentPollInterface: React.FC<StudentPollInterfaceProps> = ({
         </div>
 
         {/* Submit Button or Wait Message */}
-        <div className="flex justify-center mt-8">
+        <div className="mt-8">
           {localShowResults ? (
             <h2 className="text-2xl font-medium text-gray-700 text-center">
               Wait for teacher to ask a new question
             </h2>
           ) : (
-            <Button
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              className={`${
-                !canSubmit
-                  ? "bg-gray-300 cursor-not-allowed"
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSubmit}
+                disabled={!canSubmit}
+                className={`${
+                  !canSubmit
+                    ? "bg-gray-300 cursor-not-allowed"
+                    : hasSubmitted
+                      ? "bg-green-500 hover:bg-green-600"
+                      : "bg-purple-600 hover:bg-purple-700"
+                }`}
+              >
+                {isSubmitting
+                  ? "Submitting..."
                   : hasSubmitted
-                    ? "bg-green-500 hover:bg-green-600"
-                    : "bg-purple-600 hover:bg-purple-700"
-              }`}
-            >
-              {isSubmitting
-                ? "Submitting..."
-                : hasSubmitted
-                  ? "Submitted ✓"
-                  : isTimeUp
-                    ? "Time's Up!"
-                    : "Submit"}
-            </Button>
+                    ? "Submitted ✓"
+                    : isTimeUp
+                      ? "Time's Up!"
+                      : "Submit"}
+              </Button>
+            </div>
           )}
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { useStudentSession } from "../hooks/useStudentSession";
-import WaitingArea from "../components/WaitingArea";
-import StudentPollInterface from "../components/StudentPollInterface";
-import LoadingState from "../components/LoadingState";
+import WaitingArea from "../components/student/WaitingArea";
+import StudentPollInterface from "../components/student/StudentPollInterface";
+import LoadingState from "../components/common/LoadingState";
 
 const PollArea = () => {
   const {
@@ -25,10 +25,7 @@ const PollArea = () => {
   }
 
   // Determine if results should be shown
-  const showResults =
-    hasSubmitted ||
-    pollStatus.poll.status === "ended" ||
-    pollStatus.poll.status !== "active";
+  const showResults = hasSubmitted || pollStatus.poll.status === "ended";
 
   return (
     <StudentPollInterface

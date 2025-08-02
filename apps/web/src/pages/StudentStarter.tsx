@@ -1,37 +1,51 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import Button from "../components/Button";
-import Pill from "../components/Pill";
-import { useJoinSessionMutation } from "../store/api/pollApi";
+import { useDispatch } from "react-redux";
+import Button from "../components/common/Button";
+import Pill from "../components/common/Pill";
+import { useWebSocket, useStudent } from "../hooks/useWebSocket";
 import {
   setStudentInfo,
-  setIsJoining,
   resetStudentState,
 } from "../store/slices/studentUISlice";
-import { socketActions } from "../store/middleware/socketMiddleware";
-import type { RootState } from "../store/store";
 
 const StudentStarter: React.FC = () => {
   const [name, setName] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [isJoining, setIsJoining] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // Get current student state
-  const student = useSelector(
-    (state: RootState) => state.studentUI.currentStudent
-  );
+  const { connect, isConnected } = useWebSocket();
+  const { currentStudent, error: studentError, joinAsStudent } = useStudent();
 
-  // RTK Query hooks
-  const [joinSession, { isLoading: isJoiningPoll }] = useJoinSessionMutation();
-
-  // Check if student is already logged in and redirect
+  // Connect to WebSocket when component mounts
   useEffect(() => {
-    if (student.hasJoined && student.id && student.name) {
+    if (!isConnected) {
+      connect();
+    }
+  }, [connect, isConnected]);
+
+  // Handle successful student join
+  useEffect(() => {
+    if (currentStudent?.id && currentStudent?.name) {
+      dispatch(
+        setStudentInfo({
+          id: currentStudent.id,
+          name: currentStudent.name,
+        })
+      );
       navigate("/poll");
     }
-  }, [student.hasJoined, student.id, student.name, navigate]);
+  }, [currentStudent, dispatch, navigate]);
+
+  // Handle WebSocket errors
+  useEffect(() => {
+    if (studentError) {
+      setError(studentError);
+      setIsJoining(false);
+    }
+  }, [studentError]);
 
   const handleStartNewSession = () => {
     dispatch(resetStudentState());
@@ -45,35 +59,22 @@ const StudentStarter: React.FC = () => {
       return;
     }
 
+    if (!isConnected) {
+      setError("Not connected to server. Please wait...");
+      return;
+    }
+
     try {
       setError("");
-      dispatch(setIsJoining(true));
+      setIsJoining(true);
 
-      // Join the session using RTK Query (for data persistence)
-      const result = await joinSession({ studentName: name.trim() }).unwrap();
+      // Join as student via WebSocket
+      joinAsStudent(name.trim());
 
-      // Update Redux state with student info
-      dispatch(
-        setStudentInfo({
-          id: result.student.id,
-          name: result.student.name,
-        })
-      );
-
-      // Connect to WebSocket for real-time updates
-      dispatch(socketActions.connect());
-      dispatch(socketActions.joinStudent(name.trim()));
-
-      // Navigate to poll area
-      navigate("/poll");
-    } catch (err: unknown) {
-      const errorMessage =
-        err && typeof err === "object" && "data" in err
-          ? (err.data as { error?: string })?.error
-          : "Failed to join poll. Please try again.";
-      setError(errorMessage || "Failed to join poll. Please try again.");
-    } finally {
-      dispatch(setIsJoining(false));
+      // Navigation will happen via useEffect when currentStudent is set
+    } catch {
+      setError("Failed to join poll. Please try again.");
+      setIsJoining(false);
     }
   };
 
@@ -85,9 +86,7 @@ const StudentStarter: React.FC = () => {
   }, [name, error]);
 
   // Show "already logged in" state if student has joined
-  // not working right now as session id is changing when backend restarts
-  // --- IGNORE ---
-  if (student.hasJoined && student.id && student.name) {
+  if (currentStudent?.id && currentStudent?.name) {
     return (
       <div className="min-h-screen flex items-center justify-center font-sans p-4">
         <div className="w-full max-w-4xl mx-auto flex flex-col gap-10 items-center text-center">
@@ -95,12 +94,13 @@ const StudentStarter: React.FC = () => {
 
           <div className="w-full mx-auto flex flex-col gap-4 items-center text-center">
             <h1 className="text-4xl md:text-5xl font-light tracking-tight">
-              Welcome Back, <span className="font-medium">{student.name}</span>!
+              Welcome Back,{" "}
+              <span className="font-medium">{currentStudent.name}</span>!
             </h1>
 
             <p className="text-muted text-lg">
-              You're already logged into the polling session. You can continue
-              to the poll area or start a new session.
+              You're already logged into the polling session via WebSocket. You
+              can continue to the poll area or start a new session.
             </p>
           </div>
 
@@ -139,9 +139,19 @@ const StudentStarter: React.FC = () => {
             <span className="text-black font-semibold">
               submit your answers
             </span>
-            , participate in live polls, and see how your responses compare with
-            your classmates
+            , participate in live polls via WebSocket, and see how your
+            responses compare with your classmates in real-time
           </p>
+
+          {/* Connection Status */}
+          <div className="flex items-center gap-2 mt-4">
+            <div
+              className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
+            ></div>
+            <span className="text-sm text-gray-600">
+              {isConnected ? "Connected to server" : "Connecting..."}
+            </span>
+          </div>
         </div>
 
         {/* input for name */}
@@ -155,7 +165,7 @@ const StudentStarter: React.FC = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="border text-lg border-gray-300 rounded-lg p-4 w-full"
-            disabled={isJoiningPoll}
+            disabled={isJoining || !isConnected}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 handleSubmit();
@@ -175,9 +185,9 @@ const StudentStarter: React.FC = () => {
             className="mt-6"
             onClick={handleSubmit}
             type="submit"
-            disabled={!name.trim() || isJoiningPoll}
+            disabled={!name.trim() || isJoining || !isConnected}
           >
-            {isJoiningPoll ? "Joining..." : "Join Poll"}
+            {isJoining ? "Joining..." : "Join Poll"}
           </Button>
         </div>
       </div>

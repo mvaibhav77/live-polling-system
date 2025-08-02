@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import Button from "./Button";
-import PollQuestionCard from "./PollQuestionCard";
+import Button from "../common/Button";
+import PollQuestionCard from "../poll/PollQuestionCard";
 
 interface TeacherPollInterfaceProps {
   poll?: {

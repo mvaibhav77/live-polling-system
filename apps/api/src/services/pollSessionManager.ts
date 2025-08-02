@@ -13,6 +13,12 @@ class PollSessionManager {
   private currentPoll: GlobalPollSession | null = null;
   private sessionHistory: SessionPollHistory[] = []; // Store completed polls in session
   private questionSequence: number = 0; // Track intended question numbering
+  private onPollEndedCallback: ((results: PollResults) => void) | null = null;
+
+  // Set callback for when poll ends automatically
+  setOnPollEndedCallback(callback: (results: PollResults) => void) {
+    this.onPollEndedCallback = callback;
+  }
 
   getCurrentPoll(): GlobalPollSession | null {
     return this.currentPoll;
@@ -183,8 +189,16 @@ class PollSessionManager {
       this.currentPoll.timer = undefined;
     }
 
+    // Get results before notifying session manager
+    const results = this.getPollResults();
+
     // Notify session manager that poll ended
     sessionManager.setCurrentPoll(null);
+
+    // Call the callback to notify socket layer (for timer-based endings)
+    if (this.onPollEndedCallback && results) {
+      this.onPollEndedCallback(results);
+    }
 
     // Save the completed poll to both session history and persistent storage
     this.savePollToSessionHistory().catch((error) =>

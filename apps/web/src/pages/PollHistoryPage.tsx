@@ -1,22 +1,15 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { useGetPollHistoryQuery } from "../store/api/pollApi";
-import Button from "../components/Button";
-import StatsSummary from "../components/StatsSummary";
-import PollHistoryItemCard from "../components/PollHistoryItemCard";
+import { usePollHistory } from "../hooks/useWebSocket";
+import Button from "../components/common/Button";
+import StatsSummary from "../components/history/StatsSummary";
+import PollHistoryItemCard from "../components/history/PollHistoryItemCard";
 import { usePollHistoryStats } from "../hooks/usePollHistoryStats";
-import LoadingState from "../components/LoadingState";
-import ErrorState from "../components/ErrorState";
+import LoadingState from "../components/common/LoadingState";
+import ErrorState from "../components/common/ErrorState";
 
 const PollHistoryPage: React.FC = () => {
-  const {
-    data: pollHistoryData,
-    isLoading,
-    error,
-    refetch,
-  } = useGetPollHistoryQuery();
-
-  const pollHistory = pollHistoryData?.polls || [];
+  const { pollHistory, isLoading, error, refetch } = usePollHistory();
   const stats = usePollHistoryStats(pollHistory);
 
   if (isLoading) {
@@ -27,11 +20,7 @@ const PollHistoryPage: React.FC = () => {
     return (
       <ErrorState
         title="Failed to load poll history"
-        message={
-          error && "status" in error
-            ? `Error ${error.status}: ${error.data}`
-            : "An unexpected error occurred"
-        }
+        message={error}
         onRetry={() => refetch()}
         retryText="Try Again"
       />

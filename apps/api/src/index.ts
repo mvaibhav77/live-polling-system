@@ -5,9 +5,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import prisma from "./config/database";
 import historyRoutes from "./routes/historyRoutes";
-import pollRoutes from "./routes/pollRoutes";
-import chatRoutes from "./routes/chatRoutes";
-import { setupSocketHandlers } from "./sockets/pollEvents";
+import { setupSocketHandlers } from "./sockets/index";
 
 // Load environment variables
 dotenv.config();
@@ -31,10 +29,8 @@ app.use(
 );
 app.use(express.json());
 
-// API Routes
+// API Routes (Only essential ones)
 app.use("/api/history", historyRoutes);
-app.use("/api", pollRoutes(io));
-app.use("/api", chatRoutes(io));
 
 // Routes
 app.get("/", (req, res) => {
@@ -75,13 +71,14 @@ app.get("/api/test-db", async (req, res) => {
   }
 });
 
-// Setup Socket.io
+// Setup Socket.io (Main communication method)
 setupSocketHandlers(io);
 
 // Start server
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Live Polling API is ready!`);
+  console.log(`🔌 WebSocket communication enabled`);
   console.log(
     `🗄️ Database: ${process.env.DATABASE_URL ? "Configured" : "Not configured"}`
   );

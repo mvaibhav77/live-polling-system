@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import Button from "./Button";
-import View from "../assets/view.svg";
+import Button from "../common/Button";
+import View from "../../assets/view.svg";
 
 const DashboardHeader: React.FC = () => {
   return (

@@ -1,7 +1,7 @@
 import React from "react";
-import PollQuestionCard from "./PollQuestionCard";
-import PollStatsCard from "./PollStatsCard";
-import type { PollHistoryItem } from "../store/api/pollApi";
+import PollQuestionCard from "../poll/PollQuestionCard";
+import PollStatsCard from "../poll/PollStatsCard";
+import type { PollHistoryItem } from "../../store/slices/pollSlice";
 
 interface PollHistoryItemCardProps {
   poll: PollHistoryItem;
