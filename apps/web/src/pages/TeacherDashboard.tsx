@@ -13,7 +13,6 @@ const TeacherDashboard: React.FC = () => {
   const {
     currentPoll,
     pollResults,
-    pollStats,
     isLoadingStatus,
     isEndingPoll,
     handleEndPoll,
@@ -54,17 +53,11 @@ const TeacherDashboard: React.FC = () => {
                 isActive={currentPoll.status === "active"}
                 timeLeft={timeLeft}
                 formatTime={formatTime}
-                questionNumber={pollStats?.currentQuestionNumber || 1}
+                questionNumber={currentPoll.questionNumber}
               />
 
               <PollQuestionCard
-                poll={{
-                  pollId: currentPoll.pollId,
-                  question: currentPoll.question,
-                  options: currentPoll.options,
-                  status: currentPoll.status,
-                  questionNumber: pollStats?.currentQuestionNumber || 1,
-                }}
+                poll={currentPoll}
                 pollResults={pollResults}
                 showResults={true}
                 isInteractive={false}

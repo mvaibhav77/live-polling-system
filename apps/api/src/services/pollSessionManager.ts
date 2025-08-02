@@ -10,8 +10,8 @@ import { PollHistoryService } from "./pollHistoryService";
 
 class PollSessionManager {
   private currentPoll: GlobalPollSession | null = null;
-  private pollSequenceNumber: number = 0; // Track question numbers
   private sessionHistory: SessionPollHistory[] = []; // Store completed polls in session
+  private questionSequence: number = 0; // Track intended question numbering
 
   getCurrentPoll(): GlobalPollSession | null {
     return this.currentPoll;
@@ -25,10 +25,8 @@ class PollSessionManager {
   ): GlobalPollSession {
     // Save previous poll to session history if it exists and is completed
     if (this.currentPoll && this.currentPoll.status !== "ended") {
-      // Note: This is fire-and-forget for performance, errors are logged
-      this.savePollToSessionHistory().catch((error) =>
-        console.error("Error saving previous poll:", error)
-      );
+      // Force end the previous poll before creating new one
+      this.endPoll();
     }
 
     // Get students from session manager and convert to poll students
@@ -53,13 +51,14 @@ class PollSessionManager {
       );
     });
 
-    // Increment sequence number for new poll
-    this.pollSequenceNumber++;
+    // Increment question sequence for each new poll created
+    this.questionSequence++;
+    const questionNumber = this.questionSequence;
 
     const pollId = this.generateId();
     this.currentPoll = {
       pollId,
-      questionNumber: this.pollSequenceNumber,
+      questionNumber: questionNumber,
       question,
       options,
       timeLimit,
@@ -70,7 +69,7 @@ class PollSessionManager {
     };
 
     console.log(
-      `📊 New poll created - Question ${this.pollSequenceNumber}: ${question}`
+      `📊 New poll created - Question ${questionNumber}: ${question}`
     );
     return this.currentPoll;
   }
@@ -347,7 +346,7 @@ class PollSessionManager {
       studentsCount: this.currentPoll?.students.size || 0,
       sessionStudentsCount: sessionStats.totalStudents, // Total students in session
       responsesCount: this.currentPoll?.responses.size || 0,
-      totalQuestionsAsked: this.pollSequenceNumber,
+      totalQuestionsAsked: this.sessionHistory.length, // Use completed polls count
       completedPolls: this.sessionHistory.length,
     };
   }
@@ -455,8 +454,8 @@ class PollSessionManager {
       clearTimeout(this.currentPoll.timer);
     }
     this.currentPoll = null;
-    this.pollSequenceNumber = 0;
     this.sessionHistory = [];
+    this.questionSequence = 0; // Reset question numbering
     console.log("🔄 Session reset - ready for new teaching session");
   }
 

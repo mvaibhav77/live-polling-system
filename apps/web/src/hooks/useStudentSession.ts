@@ -29,8 +29,9 @@ export const useStudentSession = () => {
       );
       dispatch(socketActions.connect());
 
-      // Note: We don't call joinStudent here because the student already joined via REST API
-      // The WebSocket connection is purely for receiving real-time updates
+      // Join the WebSocket session for real-time updates
+      // This is separate from the REST API join and enables real-time poll updates
+      dispatch(socketActions.joinStudent(student.name));
     }
 
     // Cleanup on unmount

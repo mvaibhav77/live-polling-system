@@ -17,6 +17,7 @@ export default function createPollRoutes(io: Server) {
         poll: currentPoll
           ? {
               pollId: currentPoll.pollId,
+              questionNumber: currentPoll.questionNumber,
               question: currentPoll.question,
               options: currentPoll.options,
               status: currentPoll.status,
@@ -49,6 +50,18 @@ export default function createPollRoutes(io: Server) {
 
       const poll = pollSessionManager.createPoll(question, options, timeLimit);
 
+      // Broadcast new poll to all connected clients
+      io.emit("poll-created", {
+        poll: {
+          pollId: poll.pollId,
+          questionNumber: poll.questionNumber,
+          question: poll.question,
+          options: poll.options,
+          timeLimit: poll.timeLimit,
+          status: poll.status,
+        },
+      });
+
       res.status(201).json({
         success: true,
         poll: {
@@ -75,6 +88,14 @@ export default function createPollRoutes(io: Server) {
 
       if (success) {
         const currentPoll = pollSessionManager.getCurrentPoll();
+
+        // Broadcast poll started to all connected clients
+        io.emit("poll-started", {
+          pollId: currentPoll?.pollId,
+          timeLimit: currentPoll?.timeLimit,
+          startTime: currentPoll?.startTime,
+        });
+
         res.json({
           success: true,
           message: "Poll started successfully",
@@ -105,6 +126,10 @@ export default function createPollRoutes(io: Server) {
 
       if (success) {
         const results = pollSessionManager.getPollResults();
+
+        // Broadcast poll ended to all connected clients
+        io.emit("poll-ended", { results });
+
         res.json({
           success: true,
           message: "Poll ended successfully",
@@ -184,6 +209,7 @@ export default function createPollRoutes(io: Server) {
           poll: currentPoll
             ? {
                 pollId: currentPoll.pollId,
+                questionNumber: currentPoll.questionNumber,
                 question: currentPoll.question,
                 options: currentPoll.options,
                 status: currentPoll.status,
@@ -235,6 +261,7 @@ export default function createPollRoutes(io: Server) {
           poll: currentPoll
             ? {
                 pollId: currentPoll.pollId,
+                questionNumber: currentPoll.questionNumber,
                 question: currentPoll.question,
                 options: currentPoll.options,
                 status: currentPoll.status,

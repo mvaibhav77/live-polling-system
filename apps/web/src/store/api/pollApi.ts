@@ -9,6 +9,7 @@ export interface CreatePollRequest {
 
 export interface Poll {
   pollId: string;
+  questionNumber?: number;
   question: string;
   options: string[];
   status: "waiting" | "active" | "ended";

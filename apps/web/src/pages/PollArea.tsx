@@ -30,14 +30,14 @@ const PollArea = () => {
     pollStatus.poll.status === "ended" ||
     pollStatus.poll.status !== "active";
 
-  // Calculate current question number using the corrected field
-  const currentQuestionNumber = pollStatus.stats?.currentQuestionNumber || 1;
-
   return (
     <StudentPollInterface
       poll={{
         ...pollStatus.poll,
-        questionNumber: currentQuestionNumber,
+        questionNumber:
+          pollStatus.poll.questionNumber ||
+          pollStatus.stats?.currentQuestionNumber ||
+          1,
       }}
       studentName={student.name}
       onSubmit={handleSubmitAnswer}
