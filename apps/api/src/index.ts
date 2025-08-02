@@ -6,6 +6,7 @@ import { Server } from "socket.io";
 import prisma from "./config/database";
 import historyRoutes from "./routes/historyRoutes";
 import pollRoutes from "./routes/pollRoutes";
+import chatRoutes from "./routes/chatRoutes";
 import { setupSocketHandlers } from "./sockets/pollEvents";
 
 // Load environment variables
@@ -33,6 +34,7 @@ app.use(express.json());
 // API Routes
 app.use("/api/history", historyRoutes);
 app.use("/api", pollRoutes(io));
+app.use("/api", chatRoutes(io));
 
 // Routes
 app.get("/", (req, res) => {

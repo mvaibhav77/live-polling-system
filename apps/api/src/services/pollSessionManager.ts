@@ -7,6 +7,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { sessionManager } from "./sessionManager";
 import { PollHistoryService } from "./pollHistoryService";
+import { chatService } from "./chatService";
 
 class PollSessionManager {
   private currentPoll: GlobalPollSession | null = null;
@@ -456,6 +457,10 @@ class PollSessionManager {
     this.currentPoll = null;
     this.sessionHistory = [];
     this.questionSequence = 0; // Reset question numbering
+
+    // Clear chat messages as well
+    chatService.clearMessages();
+
     console.log("🔄 Session reset - ready for new teaching session");
   }
 
