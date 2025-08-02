@@ -1,3 +1,4 @@
+import { ChatModal } from "../chat";
 import Pill from "../common/Pill";
 import Spinner from "../common/Spinner";
 
@@ -56,6 +57,8 @@ const WaitingArea: React.FC<WaitingAreaProps> = ({
           )}
         </div>
       </div>
+
+      <ChatModal />
     </div>
   );
 };

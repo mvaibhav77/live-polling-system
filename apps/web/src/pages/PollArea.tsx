@@ -2,6 +2,7 @@ import { useStudentSession } from "../hooks/useStudentSession";
 import WaitingArea from "../components/student/WaitingArea";
 import StudentPollInterface from "../components/student/StudentPollInterface";
 import LoadingState from "../components/common/LoadingState";
+import { ChatModal } from "../components/chat";
 
 const PollArea = () => {
   const {
@@ -28,21 +29,26 @@ const PollArea = () => {
   const showResults = hasSubmitted || pollStatus.poll.status === "ended";
 
   return (
-    <StudentPollInterface
-      poll={{
-        ...pollStatus.poll,
-        questionNumber:
-          pollStatus.poll.questionNumber ||
-          pollStatus.stats?.currentQuestionNumber ||
-          1,
-      }}
-      studentName={student.name}
-      onSubmit={handleSubmitAnswer}
-      isSubmitting={isSubmitting}
-      hasSubmitted={hasSubmitted}
-      pollResults={pollResultsData?.results || null}
-      showResults={showResults}
-    />
+    <>
+      <StudentPollInterface
+        poll={{
+          ...pollStatus.poll,
+          questionNumber:
+            pollStatus.poll.questionNumber ||
+            pollStatus.stats?.currentQuestionNumber ||
+            1,
+        }}
+        studentName={student.name}
+        onSubmit={handleSubmitAnswer}
+        isSubmitting={isSubmitting}
+        hasSubmitted={hasSubmitted}
+        pollResults={pollResultsData?.results || null}
+        showResults={showResults}
+      />
+
+      {/* Chat Modal */}
+      <ChatModal />
+    </>
   );
 };
 

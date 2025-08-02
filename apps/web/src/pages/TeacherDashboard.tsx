@@ -6,6 +6,7 @@ import NoPollState from "../components/teacher/NoPollState";
 import DashboardHeader from "../components/teacher/DashboardHeader";
 import LoadingState from "../components/common/LoadingState";
 import ErrorState from "../components/common/ErrorState";
+import { ChatModal } from "../components/chat";
 import { useWebSocket, useTeacher } from "../hooks/useWebSocket";
 import { useTeacherPollTimer } from "../hooks/useTeacherPollTimer";
 
@@ -139,6 +140,9 @@ const TeacherDashboard: React.FC = () => {
           <NoPollState />
         )}
       </div>
+
+      {/* Chat Modal */}
+      <ChatModal />
     </div>
   );
 };

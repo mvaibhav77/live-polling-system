@@ -5,6 +5,8 @@ import { sessionManager } from "./sessionManager";
 class ChatService {
   private messages: ChatMessage[] = [];
   private readonly maxMessages = 100; // Keep last 100 messages
+  private lastSystemMessageTime = 0;
+  private readonly systemMessageCooldown = 100; // 100ms cooldown between system messages
 
   // Send a chat message
   sendMessage(
@@ -12,12 +14,13 @@ class ChatService {
     senderName: string,
     message: string
   ): ChatMessage {
+    const now = Date.now();
     const chatMessage: ChatMessage = {
-      id: uuidv4(),
+      id: `${uuidv4()}-${now}`, // Ensure uniqueness with timestamp
       senderType,
       senderName,
       message: message.trim(),
-      timestamp: Date.now(),
+      timestamp: now,
     };
 
     // Add to messages array
@@ -71,11 +74,33 @@ class ChatService {
 
   // Add system message (for events like student joined/left/kicked)
   addSystemMessage(message: string): ChatMessage {
+    const now = Date.now();
+
+    // Prevent rapid system messages that could cause duplicate keys
+    if (now - this.lastSystemMessageTime < this.systemMessageCooldown) {
+      // Add a small delay to ensure uniqueness
+      setTimeout(() => {
+        this.lastSystemMessageTime = Date.now();
+      }, this.systemMessageCooldown);
+    } else {
+      this.lastSystemMessageTime = now;
+    }
+
     return this.sendMessage("teacher", "System", `📢 ${message}`);
   }
 
   // Get participant list with online status
-  getParticipants() {
+  getParticipants(): string[] {
+    const students = sessionManager.getAllStudents();
+    const participantNames = [
+      "Teacher",
+      ...students.map((student) => student.name),
+    ];
+    return participantNames;
+  }
+
+  // Get detailed participant information (for future use)
+  getDetailedParticipants() {
     const students = sessionManager.getAllStudents();
     const connectedStudents = sessionManager.getConnectedStudents();
 
