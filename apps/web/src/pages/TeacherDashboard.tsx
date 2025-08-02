@@ -4,7 +4,8 @@ import PollHeader from "../components/PollHeader";
 import PollActions from "../components/PollActions";
 import NoPollState from "../components/NoPollState";
 import DashboardHeader from "../components/DashboardHeader";
-import Spinner from "../components/Spinner";
+import LoadingState from "../components/LoadingState";
+import ErrorState from "../components/ErrorState";
 import { usePollManagement } from "../hooks/usePollManagement";
 import { usePollTimer } from "../hooks/usePollTimer";
 
@@ -26,34 +27,18 @@ const TeacherDashboard: React.FC = () => {
   });
 
   if (isLoadingStatus) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Spinner size="lg" />
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState loadingText="Loading dashboard..." />;
   }
 
   // Handle API errors
   if (pollStatusError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-600 mb-4">⚠️ Error loading poll data</div>
-          <p className="text-gray-600 mb-4">
-            There was an issue connecting to the server. Please try refreshing
-            the page.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-          >
-            Refresh Page
-          </button>
-        </div>
-      </div>
+      <ErrorState
+        title="Error loading poll data"
+        message="There was an issue connecting to the server. Please try refreshing the page."
+        onRetry={() => window.location.reload()}
+        retryText="Refresh Page"
+      />
     );
   }
 
@@ -69,7 +54,7 @@ const TeacherDashboard: React.FC = () => {
                 isActive={currentPoll.status === "active"}
                 timeLeft={timeLeft}
                 formatTime={formatTime}
-                questionNumber={pollStats?.totalQuestionsAsked || 1}
+                questionNumber={pollStats?.currentQuestionNumber || 1}
               />
 
               <PollQuestionCard

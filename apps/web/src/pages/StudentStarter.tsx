@@ -9,6 +9,7 @@ import {
   setIsJoining,
   resetStudentState,
 } from "../store/slices/studentUISlice";
+import { socketActions } from "../store/middleware/socketMiddleware";
 import type { RootState } from "../store/store";
 
 const StudentStarter: React.FC = () => {
@@ -48,7 +49,7 @@ const StudentStarter: React.FC = () => {
       setError("");
       dispatch(setIsJoining(true));
 
-      // Join the session using RTK Query
+      // Join the session using RTK Query (for data persistence)
       const result = await joinSession({ studentName: name.trim() }).unwrap();
 
       // Update Redux state with student info
@@ -58,6 +59,10 @@ const StudentStarter: React.FC = () => {
           name: result.student.name,
         })
       );
+
+      // Connect to WebSocket for real-time updates
+      dispatch(socketActions.connect());
+      dispatch(socketActions.joinStudent(name.trim()));
 
       // Navigate to poll area
       navigate("/poll");
@@ -80,6 +85,8 @@ const StudentStarter: React.FC = () => {
   }, [name, error]);
 
   // Show "already logged in" state if student has joined
+  // not working right now as session id is changing when backend restarts
+  // --- IGNORE ---
   if (student.hasJoined && student.id && student.name) {
     return (
       <div className="min-h-screen flex items-center justify-center font-sans p-4">
@@ -149,7 +156,7 @@ const StudentStarter: React.FC = () => {
             onChange={(e) => setName(e.target.value)}
             className="border text-lg border-gray-300 rounded-lg p-4 w-full"
             disabled={isJoiningPoll}
-            onKeyPress={(e) => {
+            onKeyDown={(e) => {
               if (e.key === "Enter") {
                 handleSubmit();
               }

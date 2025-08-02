@@ -5,7 +5,8 @@ import Button from "../components/Button";
 import StatsSummary from "../components/StatsSummary";
 import PollHistoryItemCard from "../components/PollHistoryItemCard";
 import { usePollHistoryStats } from "../hooks/usePollHistoryStats";
-import Spinner from "../components/Spinner";
+import LoadingState from "../components/LoadingState";
+import ErrorState from "../components/ErrorState";
 
 const PollHistoryPage: React.FC = () => {
   const {
@@ -19,36 +20,21 @@ const PollHistoryPage: React.FC = () => {
   const stats = usePollHistoryStats(pollHistory);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Spinner size="lg" />
-          <p className="text-gray-600">Loading poll history...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState loadingText="Loading poll history..." />;
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-500 text-xl mb-4">
-            Failed to load poll history
-          </div>
-          <p className="text-gray-600 mb-4">
-            {error && "status" in error
-              ? `Error ${error.status}: ${error.data}`
-              : "An unexpected error occurred"}
-          </p>
-          <button
-            onClick={() => refetch()}
-            className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-dark"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
+      <ErrorState
+        title="Failed to load poll history"
+        message={
+          error && "status" in error
+            ? `Error ${error.status}: ${error.data}`
+            : "An unexpected error occurred"
+        }
+        onRetry={() => refetch()}
+        retryText="Try Again"
+      />
     );
   }
 

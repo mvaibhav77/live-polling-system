@@ -1,5 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { pollSessionManager } from "../services/pollSessionManager";
+import { sessionManager } from "../services/sessionManager";
 
 export function setupStudentEvents(io: Server, socket: Socket) {
   // Student joins the poll session
@@ -140,6 +141,36 @@ export function setupStudentEvents(io: Server, socket: Socket) {
       });
     } catch (error) {
       socket.emit("status-error", { message: "Failed to get poll status" });
+    }
+  });
+
+  // Handle student disconnect
+  socket.on("disconnect", () => {
+    try {
+      const student = pollSessionManager.getStudentBySocketId(socket.id);
+      if (student) {
+        // Remove student from poll session
+        pollSessionManager.removeStudent(student.id);
+
+        // Also remove from session manager
+        sessionManager.removeStudent(socket.id);
+
+        // Get updated stats
+        const stats = pollSessionManager.getStats();
+        const sessionStats = sessionManager.getSessionStats();
+
+        // Broadcast student left to all clients
+        io.emit("student-left", {
+          studentId: student.id,
+          studentName: student.name,
+          studentsCount: stats.studentsCount,
+          connectedStudents: sessionStats.connectedStudents,
+        });
+
+        console.log(`Student disconnected: ${student.name} (${student.id})`);
+      }
+    } catch (error) {
+      console.error("Error handling student disconnect:", error);
     }
   });
 }

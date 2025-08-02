@@ -24,6 +24,7 @@ export interface PollStats {
   totalResponses: number;
   sessionStudentsCount: number; // Total students in session
   totalQuestionsAsked: number; // Questions asked so far
+  currentQuestionNumber: number; // Current question number
 }
 
 export interface PollStatus {

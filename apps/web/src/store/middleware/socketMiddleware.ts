@@ -4,9 +4,9 @@ import {
   setConnected,
   setConnectionError,
   setLastMessage,
-  setRoom,
   resetSocket,
 } from "../slices/socketSlice";
+import pollApi from "../api/pollApi";
 
 let socket: Socket | null = null;
 
@@ -27,10 +27,19 @@ export const socketMiddleware: Middleware =
         socket.disconnect();
       }
 
-      const serverUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
-      socket = io(serverUrl);
+      const serverUrl =
+        import.meta.env.VITE_SOCKET_URL || "http://localhost:3001";
+      console.log("🔌 Connecting to WebSocket server:", serverUrl);
+
+      socket = io(serverUrl, {
+        // Add explicit options to ensure proper connection
+        transports: ["websocket", "polling"],
+        timeout: 5000,
+        forceNew: true,
+      });
 
       socket.on("connect", () => {
+        console.log("✅ WebSocket connected successfully");
         dispatch(setConnected(true));
         dispatch(
           setLastMessage({
@@ -40,54 +49,150 @@ export const socketMiddleware: Middleware =
         );
       });
 
-      socket.on("disconnect", () => {
+      socket.on("disconnect", (reason) => {
+        console.log("🔌 WebSocket disconnected:", reason);
         dispatch(setConnected(false));
       });
 
       socket.on("connect_error", (error: Error) => {
+        console.error("❌ WebSocket connection error:", error.message);
         dispatch(setConnectionError(error.message));
         dispatch(setConnected(false));
       });
 
-      // Poll events - trigger RTK Query cache invalidation instead of direct state updates
-      socket.on("pollStarted", (poll: unknown) => {
+      // ===== BACKEND EVENT MAPPING =====
+      // Real-time cache invalidation based on backend WebSocket events
+
+      // Poll lifecycle events
+      socket.on("poll-created", (data: unknown) => {
+        console.log("🔔 Poll created:", data);
         dispatch(
           setLastMessage({
-            type: "pollStarted",
-            payload: poll,
+            type: "poll-created",
+            payload: data,
             timestamp: Date.now(),
           })
         );
-        // RTK Query will handle the actual poll data via automatic refetching
+        // Invalidate poll status to fetch the new poll
+        dispatch(pollApi.util.invalidateTags(["PollStatus"]));
       });
 
-      socket.on("pollResults", (results: Record<string, number>) => {
+      socket.on("poll-started", (data: unknown) => {
+        console.log("🚀 Poll started:", data);
         dispatch(
           setLastMessage({
-            type: "pollResults",
-            payload: results,
+            type: "poll-started",
+            payload: data,
             timestamp: Date.now(),
           })
         );
-        // RTK Query will handle the actual results data via automatic refetching
+        // Invalidate poll status to update poll state
+        dispatch(pollApi.util.invalidateTags(["PollStatus"]));
       });
 
-      // Student connection events for real-time UI updates
-      socket.on("studentJoined", (student: unknown) => {
+      socket.on("poll-ended", (data: unknown) => {
+        console.log("🏁 Poll ended:", data);
         dispatch(
           setLastMessage({
-            type: "studentJoined",
-            payload: student,
+            type: "poll-ended",
+            payload: data,
+            timestamp: Date.now(),
+          })
+        );
+        // Invalidate both status and results when poll ends
+        dispatch(pollApi.util.invalidateTags(["PollStatus", "PollResults"]));
+      });
+
+      // Student events
+      socket.on("student-joined", (data: unknown) => {
+        console.log("👨‍🎓 Student joined:", data);
+        dispatch(
+          setLastMessage({
+            type: "student-joined",
+            payload: data,
+            timestamp: Date.now(),
+          })
+        );
+        // Invalidate stats to update student counts
+        dispatch(pollApi.util.invalidateTags(["PollStats", "PollStatus"]));
+      });
+
+      socket.on("student-left", (data: unknown) => {
+        console.log("👋 Student left:", data);
+        dispatch(
+          setLastMessage({
+            type: "student-left",
+            payload: data,
+            timestamp: Date.now(),
+          })
+        );
+        // Invalidate stats to update student counts
+        dispatch(pollApi.util.invalidateTags(["PollStats", "PollStatus"]));
+      });
+
+      // Response events
+      socket.on("response-received", (data: unknown) => {
+        console.log("📊 Response received:", data);
+        dispatch(
+          setLastMessage({
+            type: "response-received",
+            payload: data,
+            timestamp: Date.now(),
+          })
+        );
+        // Invalidate results, stats AND status for complete real-time updates
+        console.log(
+          "🔄 Invalidating cache tags: PollResults, PollStats, PollStatus"
+        );
+        dispatch(
+          pollApi.util.invalidateTags([
+            "PollResults",
+            "PollStats",
+            "PollStatus",
+          ])
+        );
+      });
+
+      // Student-specific events
+      socket.on("student-join-success", (data: unknown) => {
+        console.log("✅ Student join success:", data);
+        dispatch(
+          setLastMessage({
+            type: "student-join-success",
+            payload: data,
             timestamp: Date.now(),
           })
         );
       });
 
-      socket.on("studentLeft", (studentId: string) => {
+      socket.on("response-success", (data: unknown) => {
+        console.log("✅ Response success:", data);
         dispatch(
           setLastMessage({
-            type: "studentLeft",
-            payload: { studentId },
+            type: "response-success",
+            payload: data,
+            timestamp: Date.now(),
+          })
+        );
+      });
+
+      socket.on("current-poll", (data: unknown) => {
+        console.log("📋 Current poll:", data);
+        dispatch(
+          setLastMessage({
+            type: "current-poll",
+            payload: data,
+            timestamp: Date.now(),
+          })
+        );
+      });
+
+      socket.on("poll-status-update", (data: unknown) => {
+        console.log("🔄 Poll status update:", data);
+        dispatch(
+          setLastMessage({
+            type: "poll-status-update",
+            payload: data,
             timestamp: Date.now(),
           })
         );
@@ -102,44 +207,65 @@ export const socketMiddleware: Middleware =
       dispatch(resetSocket());
     }
 
-    // Handle socket room actions
-    if (typedAction.type === "socket/joinRoom") {
-      const payload = typedAction.payload as {
-        pollId: string;
-        studentName?: string;
-      };
-      const { pollId, studentName } = payload;
+    // Handle socket room actions - Student joins session
+    if (typedAction.type === "socket/joinStudent") {
+      const payload = typedAction.payload as { studentName: string };
+      const { studentName } = payload;
       if (socket?.connected) {
-        socket.emit("joinPoll", { pollId, studentName });
-        dispatch(setRoom(pollId));
+        console.log("🚀 Emitting student-join:", { studentName });
+        socket.emit("student-join", { studentName });
       }
     }
 
-    if (typedAction.type === "socket/submitAnswer") {
-      const payload = typedAction.payload as { pollId: string; answer: number };
-      const { pollId, answer } = payload;
+    // Handle socket room actions - Teacher joins
+    if (typedAction.type === "socket/joinTeacher") {
       if (socket?.connected) {
-        socket.emit("submitAnswer", { pollId, answer });
+        console.log("🚀 Emitting teacher-join");
+        socket.emit("teacher-join");
+      }
+    }
+
+    // Handle student answer submission
+    if (typedAction.type === "socket/submitAnswer") {
+      const payload = typedAction.payload as { optionIndex: number };
+      const { optionIndex } = payload;
+      if (socket?.connected) {
+        console.log("🚀 Emitting submit-response:", { optionIndex });
+        socket.emit("submit-response", { optionIndex });
       }
     }
 
     // Handle teacher poll control actions
-    if (typedAction.type === "socket/startPoll") {
+    if (typedAction.type === "socket/createPoll") {
       const payload = typedAction.payload as {
-        pollId: string;
-        questionIndex: number;
+        question: string;
+        options: string[];
+        timeLimit: number;
       };
-      const { pollId, questionIndex } = payload;
       if (socket?.connected) {
-        socket.emit("startPoll", { pollId, questionIndex });
+        console.log("🚀 Emitting create-poll:", payload);
+        socket.emit("create-poll", payload);
+      }
+    }
+
+    if (typedAction.type === "socket/startPoll") {
+      if (socket?.connected) {
+        console.log("🚀 Emitting start-poll");
+        socket.emit("start-poll");
       }
     }
 
     if (typedAction.type === "socket/endPoll") {
-      const payload = typedAction.payload as { pollId: string };
-      const { pollId } = payload;
       if (socket?.connected) {
-        socket.emit("endPoll", { pollId });
+        console.log("🚀 Emitting end-poll");
+        socket.emit("end-poll");
+      }
+    }
+
+    if (typedAction.type === "socket/getPollStatus") {
+      if (socket?.connected) {
+        console.log("🚀 Emitting get-poll-status");
+        socket.emit("get-poll-status");
       }
     }
 
@@ -150,20 +276,24 @@ export const socketMiddleware: Middleware =
 export const socketActions = {
   connect: () => ({ type: "socket/connect" as const }),
   disconnect: () => ({ type: "socket/disconnect" as const }),
-  joinRoom: (pollId: string, studentName?: string) => ({
-    type: "socket/joinRoom" as const,
-    payload: { pollId, studentName },
+
+  // Teacher actions
+  joinTeacher: () => ({ type: "socket/joinTeacher" as const }),
+  createPoll: (question: string, options: string[], timeLimit: number) => ({
+    type: "socket/createPoll" as const,
+    payload: { question, options, timeLimit },
   }),
-  submitAnswer: (pollId: string, answer: number) => ({
+  startPoll: () => ({ type: "socket/startPoll" as const }),
+  endPoll: () => ({ type: "socket/endPoll" as const }),
+
+  // Student actions
+  joinStudent: (studentName: string) => ({
+    type: "socket/joinStudent" as const,
+    payload: { studentName },
+  }),
+  submitAnswer: (optionIndex: number) => ({
     type: "socket/submitAnswer" as const,
-    payload: { pollId, answer },
+    payload: { optionIndex },
   }),
-  startPoll: (pollId: string, questionIndex: number) => ({
-    type: "socket/startPoll" as const,
-    payload: { pollId, questionIndex },
-  }),
-  endPoll: (pollId: string) => ({
-    type: "socket/endPoll" as const,
-    payload: { pollId },
-  }),
+  getPollStatus: () => ({ type: "socket/getPollStatus" as const }),
 };

@@ -79,7 +79,9 @@ export const usePollCreation = () => {
     }
 
     try {
+      // Connect to WebSocket first
       dispatch(socketActions.connect());
+      dispatch(socketActions.joinTeacher());
 
       const pollData = {
         question: question.trim(),
@@ -89,11 +91,24 @@ export const usePollCreation = () => {
         timeLimit: timeLimit,
       };
 
+      // Use both WebSocket and REST API for reliability
+      // WebSocket for real-time updates, REST API for data persistence
       const result = await createAndStartPoll(pollData);
 
       if ("data" in result && result.data) {
         const poll = result.data;
         dispatch(setCurrentJoinCode(poll.pollId));
+
+        // Also emit WebSocket events for real-time updates
+        dispatch(
+          socketActions.createPoll(
+            pollData.question,
+            pollData.options,
+            pollData.timeLimit
+          )
+        );
+        dispatch(socketActions.startPoll());
+
         navigate("/teacher/dashboard");
       } else {
         setValidationErrors(["Failed to start poll. Please try again."]);

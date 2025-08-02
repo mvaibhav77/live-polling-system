@@ -32,7 +32,7 @@ app.use(express.json());
 
 // API Routes
 app.use("/api/history", historyRoutes);
-app.use("/api", pollRoutes);
+app.use("/api", pollRoutes(io));
 
 // Routes
 app.get("/", (req, res) => {

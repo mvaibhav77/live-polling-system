@@ -8,6 +8,7 @@ import {
   useGetPollResultsQuery,
 } from "../store/api/pollApi";
 import { resetStudentState } from "../store/slices/studentUISlice";
+import { socketActions } from "../store/middleware/socketMiddleware";
 
 export const useStudentSession = () => {
   const navigate = useNavigate();
@@ -19,10 +20,29 @@ export const useStudentSession = () => {
     (state: RootState) => state.studentUI.currentStudent
   );
 
+  // Connect to WebSocket when student session starts
+  useEffect(() => {
+    if (student.hasJoined && student.id && student.name) {
+      console.log(
+        "🔌 Student connecting to WebSocket for real-time updates:",
+        student.name
+      );
+      dispatch(socketActions.connect());
+
+      // Note: We don't call joinStudent here because the student already joined via REST API
+      // The WebSocket connection is purely for receiving real-time updates
+    }
+
+    // Cleanup on unmount
+    return () => {
+      dispatch(socketActions.disconnect());
+    };
+  }, [dispatch, student.hasJoined, student.id, student.name]);
+
   const { data: pollStatus, error: pollStatusError } = useGetPollStatusQuery(
     undefined,
     {
-      pollingInterval: 2000, // Poll every 2 seconds
+      // No polling - WebSocket handles real-time updates via cache invalidation
       refetchOnFocus: true,
       refetchOnReconnect: true,
     }
@@ -35,7 +55,7 @@ export const useStudentSession = () => {
     hasSubmitted || pollStatus?.poll?.status === "ended";
   const { data: pollResultsData } = useGetPollResultsQuery(undefined, {
     skip: !shouldFetchResults,
-    pollingInterval: shouldFetchResults ? 2000 : undefined,
+    // No polling - WebSocket handles real-time updates via cache invalidation
   });
 
   // Handle API errors that might indicate invalid session
@@ -95,6 +115,10 @@ export const useStudentSession = () => {
 
         if ("data" in result && result.data?.success) {
           setHasSubmitted(true);
+
+          // Also emit WebSocket event for real-time updates
+          dispatch(socketActions.submitAnswer(selectedOptionIndex));
+
           console.log(
             `✅ Answer submitted: ${student.name} selected option ${selectedOptionIndex}: ${pollStatus?.poll?.options[selectedOptionIndex]}`
           );

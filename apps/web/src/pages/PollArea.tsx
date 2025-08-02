@@ -1,6 +1,7 @@
 import { useStudentSession } from "../hooks/useStudentSession";
 import WaitingArea from "../components/WaitingArea";
 import StudentPollInterface from "../components/StudentPollInterface";
+import LoadingState from "../components/LoadingState";
 
 const PollArea = () => {
   const {
@@ -15,14 +16,7 @@ const PollArea = () => {
 
   // Show loading state during initialization
   if (isInitializing) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   // Show waiting area if no poll exists
@@ -36,8 +30,8 @@ const PollArea = () => {
     pollStatus.poll.status === "ended" ||
     pollStatus.poll.status !== "active";
 
-  // Calculate current question number based on total questions asked
-  const currentQuestionNumber = pollStatus.stats?.totalQuestionsAsked || 1;
+  // Calculate current question number using the corrected field
+  const currentQuestionNumber = pollStatus.stats?.currentQuestionNumber || 1;
 
   return (
     <StudentPollInterface
