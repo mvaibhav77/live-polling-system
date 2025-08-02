@@ -90,7 +90,7 @@ const ChatTab: React.FC<ChatTabProps> = React.memo(
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium text-white ${
                     message.senderType === "teacher"
                       ? "bg-red-500"
-                      : "bg-blue-500"
+                      : "bg-foreground"
                   }`}
                 >
                   {message.senderName.charAt(0).toUpperCase()}
@@ -104,7 +104,7 @@ const ChatTab: React.FC<ChatTabProps> = React.memo(
               <div
                 className={`px-4 py-2 rounded-2xl text-sm ${
                   isCurrentUser
-                    ? "bg-blue-500 text-white rounded-br-md"
+                    ? "bg-primary text-white rounded-br-md"
                     : message.senderType === "teacher"
                       ? "bg-red-100 text-red-900 rounded-bl-md"
                       : "bg-gray-100 text-gray-900 rounded-bl-md"
@@ -125,7 +125,7 @@ const ChatTab: React.FC<ChatTabProps> = React.memo(
 
             {isCurrentUser && (
               <div className="flex-shrink-0 ml-3 order-2">
-                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-medium text-white">
+                <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-xs font-medium text-white">
                   {message.senderName.charAt(0).toUpperCase()}
                 </div>
               </div>
@@ -139,7 +139,7 @@ const ChatTab: React.FC<ChatTabProps> = React.memo(
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
           {messages.length === 0 ? (
-            <div className="text-center text-gray-500 text-sm py-8">
+            <div className="text-center text-foreground text-sm py-8">
               No messages yet. Start the conversation!
             </div>
           ) : (

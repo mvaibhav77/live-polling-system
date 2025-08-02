@@ -98,19 +98,19 @@ const ParticipantsTab: React.FC<ParticipantsTabProps> = ({
                   >
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm text-blue-700">{name}</span>
-                      {student?.hasAnswered && (
+                      <span className="text-sm text-accent">{name}</span>
+                      {/* {student?.hasAnswered && (
                         <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
                           Answered
                         </span>
-                      )}
+                      )} */}
                     </div>
 
                     {isTeacher && student && (
                       <button
                         onClick={() => handleKickClick(name)}
                         disabled={!isConnected || isKicking}
-                        className="text-xs text-red-600 hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed"
+                        className="cursor-pointer text-xs text-red-600 hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed"
                       >
                         Remove
                       </button>

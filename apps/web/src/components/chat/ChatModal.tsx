@@ -3,6 +3,7 @@ import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { socketActions } from "../../store/middleware/socketMiddleware";
 import ChatTab from "./ChatTab";
 import ParticipantsTab from "./ParticipantsTab";
+import NotificationManager from "./NotificationManager";
 import ChatIcon from "../../assets/chat.svg";
 
 const ChatModal: React.FC = () => {
@@ -40,85 +41,97 @@ const ChatModal: React.FC = () => {
     }
   };
 
-  return (
-    <div className="fixed bottom-6 right-6 z-50">
-      {/* Chat Modal - positioned absolutely above the button */}
-      {isOpen && (
-        <div className="absolute bottom-16 right-0 bg-white rounded-lg shadow-xl border border-gray-200 w-96 h-[500px] flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white rounded-t-lg">
-            <div className="flex space-x-4">
-              <button
-                onClick={() => setActiveTab("chat")}
-                className={`text-sm font-medium pb-2 border-b-2 transition-colors duration-200 ${
-                  activeTab === "chat"
-                    ? "text-blue-600 border-blue-600"
-                    : "text-gray-500 border-transparent hover:text-gray-700"
-                }`}
-              >
-                Chat
-              </button>
-              <button
-                onClick={() => setActiveTab("participants")}
-                className={`text-sm font-medium pb-2 border-b-2 transition-colors duration-200 ${
-                  activeTab === "participants"
-                    ? "text-blue-600 border-blue-600"
-                    : "text-gray-500 border-transparent hover:text-gray-700"
-                }`}
-              >
-                Participants ({chatParticipants.length})
-              </button>
-            </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
-              title="Close Chat"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
+  const handleOpenChatFromNotification = () => {
+    setIsOpen(true);
+    setActiveTab("chat");
+  };
 
-          {/* Content */}
-          <div className="flex-1 overflow-hidden">
-            {activeTab === "chat" ? (
-              <ChatTab
-                messages={chatMessages}
-                onSendMessage={handleSendMessage}
-                onClearChat={handleClearChat}
-                isConnected={isConnected}
-              />
-            ) : (
-              <ParticipantsTab
-                participants={chatParticipants}
-                onKickStudent={handleKickStudent}
-                isConnected={isConnected}
-              />
-            )}
-          </div>
-        </div>
+  return (
+    <>
+      {/* Notification Manager - only show when chat is closed */}
+      {!isOpen && (
+        <NotificationManager onOpenChat={handleOpenChatFromNotification} />
       )}
 
-      {/* Single Chat Toggle Button - always in the same position */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="cursor-pointer bg-primary hover:bg-accent text-white rounded-full p-3 shadow-lg transition-colors duration-200"
-        title={isOpen ? "Close Chat" : "Open Chat"}
-      >
-        <img src={ChatIcon} alt="Chat" className="w-6 h-6" />
-      </button>
-    </div>
+      <div className="fixed bottom-12 right-14 z-50">
+        {/* Chat Modal - positioned absolutely above the button */}
+        {isOpen && (
+          <div className="absolute bottom-20 right-0 bg-white rounded-lg shadow-xl border border-gray-200 w-96 h-[500px] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white rounded-t-lg">
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => setActiveTab("chat")}
+                  className={`cursor-pointer text-sm font-medium pb-2 border-b-2 transition-colors duration-200 ${
+                    activeTab === "chat"
+                      ? "text-primary border-primary"
+                      : "text-gray-500 border-transparent hover:text-gray-700"
+                  }`}
+                >
+                  Chat
+                </button>
+                <button
+                  onClick={() => setActiveTab("participants")}
+                  className={`cursor-pointer text-sm font-medium pb-2 border-b-2 transition-colors duration-200 ${
+                    activeTab === "participants"
+                      ? "text-primary border-primary"
+                      : "text-gray-500 border-transparent hover:text-gray-700"
+                  }`}
+                >
+                  Participants ({chatParticipants.length})
+                </button>
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="cursor-pointer text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                title="Close Chat"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-hidden">
+              {activeTab === "chat" ? (
+                <ChatTab
+                  messages={chatMessages}
+                  onSendMessage={handleSendMessage}
+                  onClearChat={handleClearChat}
+                  isConnected={isConnected}
+                />
+              ) : (
+                <ParticipantsTab
+                  participants={chatParticipants}
+                  onKickStudent={handleKickStudent}
+                  isConnected={isConnected}
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Single Chat Toggle Button - always in the same position */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="cursor-pointer bg-primary hover:bg-accent text-white rounded-full p-5 shadow-lg transition-colors duration-200"
+          title={isOpen ? "Close Chat" : "Open Chat"}
+        >
+          <img src={ChatIcon} alt="Chat" className="w-7 h-7   " />
+        </button>
+      </div>
+    </>
   );
 };
 
