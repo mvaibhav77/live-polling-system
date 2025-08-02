@@ -73,8 +73,8 @@ export const socketMiddleware: Middleware =
             timestamp: Date.now(),
           })
         );
-        // Invalidate poll status to fetch the new poll
-        dispatch(pollApi.util.invalidateTags(["PollStatus"]));
+        // Invalidate poll status AND results to clear old data
+        dispatch(pollApi.util.invalidateTags(["PollStatus", "PollResults"]));
       });
 
       socket.on("poll-started", (data: unknown) => {

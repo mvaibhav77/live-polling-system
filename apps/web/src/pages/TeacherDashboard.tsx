@@ -63,6 +63,7 @@ const TeacherDashboard: React.FC = () => {
                   question: currentPoll.question,
                   options: currentPoll.options,
                   status: currentPoll.status,
+                  questionNumber: pollStats?.currentQuestionNumber || 1,
                 }}
                 pollResults={pollResults}
                 showResults={true}

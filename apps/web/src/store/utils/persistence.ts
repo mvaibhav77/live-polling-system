@@ -1,4 +1,4 @@
-// Simple localStorage persistence utility for student state
+// Simple sessionStorage persistence utility for student state
 
 export interface PersistedStudentState {
   id: string | null;
@@ -16,15 +16,15 @@ export const saveStudentToStorage = (student: PersistedStudentState): void => {
       ...student,
       sessionTimestamp: Date.now(),
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToStore));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToStore));
   } catch (error) {
-    console.warn("Failed to save student state to localStorage:", error);
+    console.warn("Failed to save student state to sessionStorage:", error);
   }
 };
 
 export const loadStudentFromStorage = (): PersistedStudentState | null => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = sessionStorage.getItem(STORAGE_KEY);
     if (!stored) return null;
 
     const data: PersistedStudentState = JSON.parse(stored);
@@ -43,7 +43,7 @@ export const loadStudentFromStorage = (): PersistedStudentState | null => {
 
     return data;
   } catch (error) {
-    console.warn("Failed to load student state from localStorage:", error);
+    console.warn("Failed to load student state from sessionStorage:", error);
     clearStudentFromStorage(); // Clear corrupted data
     return null;
   }
@@ -51,8 +51,8 @@ export const loadStudentFromStorage = (): PersistedStudentState | null => {
 
 export const clearStudentFromStorage = (): void => {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
   } catch (error) {
-    console.warn("Failed to clear student state from localStorage:", error);
+    console.warn("Failed to clear student state from sessionStorage:", error);
   }
 };
