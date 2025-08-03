@@ -1,30 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "version": 2,
   "buildCommand": "cd ../.. && pnpm build --filter=web",
   "outputDirectory": "apps/web/dist",
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": "vite",
-  "builds": [
+  "rewrites": [
     {
-      "src": "apps/web/package.json",
-      "use": "@vercel/static-build"
+      "source": "/api/(.*)",
+      "destination": "https://live-polling-api.onrender.com/api/$1"
     }
   ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "https://your-render-app.onrender.com/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ],
-  "env": {
-    "VITE_API_URL": "@vite_api_url"
-  },
-  "functions": {},
   "headers": [
     {
       "source": "/(.*)",
@@ -53,8 +38,6 @@
       ]
     }
   ],
-  "redirects": [],
-  "rewrites": [],
   "cleanUrls": true,
   "trailingSlash": false
 }

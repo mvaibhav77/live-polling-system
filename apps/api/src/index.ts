@@ -18,7 +18,8 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
   },
 });
-const PORT = process.env.PORT || 3001;
+const PORT = parseInt(process.env.PORT || "3001", 10);
+const HOST = process.env.HOST || "0.0.0.0";
 
 // Middlewares
 app.use(
@@ -75,8 +76,8 @@ app.get("/api/test-db", async (req, res) => {
 setupSocketHandlers(io);
 
 // Start server
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on ${HOST}:${PORT}`);
   console.log(`📊 Live Polling API is ready!`);
   console.log(`🔌 WebSocket communication enabled`);
   console.log(
