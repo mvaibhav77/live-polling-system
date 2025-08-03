@@ -13,6 +13,7 @@ export interface StudentUIState {
     name: string;
     hasJoined: boolean;
     hasAnswered: boolean; // Track from server
+    isKicked: boolean; // Track if student was kicked from session
   };
 
   // UI state
@@ -37,12 +38,14 @@ const loadInitialState = (): StudentUIState => {
           name: persistedStudent.name,
           hasJoined: persistedStudent.hasJoined,
           hasAnswered: false, // Always reset this from server
+          isKicked: false, // Always reset this on load
         }
       : {
           id: null,
           name: "",
           hasJoined: false,
           hasAnswered: false,
+          isKicked: false,
         },
     selectedAnswer: null,
     hasSubmittedAnswer: false,
@@ -115,6 +118,11 @@ const studentSlice = createSlice({
       state.currentStudent.hasAnswered = action.payload;
     },
 
+    // Set kicked status when student is removed
+    setIsKicked: (state, action: PayloadAction<boolean>) => {
+      state.currentStudent.isKicked = action.payload;
+    },
+
     // Complete reset
     resetStudentState: (state) => {
       state.currentStudent = {
@@ -122,6 +130,7 @@ const studentSlice = createSlice({
         name: "",
         hasJoined: false,
         hasAnswered: false,
+        isKicked: false,
       };
       state.selectedAnswer = null;
       state.hasSubmittedAnswer = false;
@@ -146,6 +155,7 @@ export const {
   setShowResults,
   resetAnswerState,
   setHasAnswered,
+  setIsKicked,
   resetStudentState,
 } = studentSlice.actions;
 

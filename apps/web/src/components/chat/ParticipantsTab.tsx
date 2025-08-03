@@ -5,20 +5,23 @@ interface ParticipantsTabProps {
   participants: string[];
   onKickStudent: (studentId: string, reason?: string) => void;
   isConnected: boolean;
+  isTeacher?: boolean;
 }
 
 const ParticipantsTab: React.FC<ParticipantsTabProps> = ({
   participants,
   onKickStudent,
   isConnected,
+  isTeacher: isTeacherProp,
 }) => {
   const [kickingStudent, setKickingStudent] = useState<string | null>(null);
   const [kickReason, setKickReason] = useState("");
 
   const { currentStudent, students } = useAppSelector((state) => state.poll);
 
-  // Determine if current user is teacher (no currentStudent means teacher)
-  const isTeacher = !currentStudent;
+  // Determine if current user is teacher - use prop if provided, otherwise fallback to state
+  const isTeacher =
+    isTeacherProp !== undefined ? isTeacherProp : !currentStudent;
 
   const handleKickClick = (studentName: string) => {
     // Find the student ID from the students list

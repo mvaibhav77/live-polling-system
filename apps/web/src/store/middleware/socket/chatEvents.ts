@@ -109,18 +109,18 @@ export const setupChatEventHandlers = (
     }
   );
 
-  // Handle being kicked (for students)
-  socket.on(
-    "kicked-from-session",
-    (data: { reason: string; message: string }) => {
-      console.log("🚪 Kicked from session:", data);
-      alert(
-        `You have been removed from the session.\nReason: ${data.reason}\n\n${data.message}`
-      );
-      // Redirect to home page
-      window.location.href = "/";
-    }
-  );
+  // // Handle being kicked (for students)
+  // socket.on(
+  //   "kicked-from-session",
+  //   (data: { reason: string; message: string }) => {
+  //     console.log("🚪 Kicked from session:", data);
+  //     alert(
+  //       `You have been removed from the session.\nReason: ${data.reason}\n\n${data.message}`
+  //     );
+  //     // Redirect to home page
+  //     // window.location.href = "/";
+  //   }
+  // );
 
   socket.on("chat-message-sent", (data: { message: ChatMessage }) => {
     console.log("✅ Chat message sent:", data);

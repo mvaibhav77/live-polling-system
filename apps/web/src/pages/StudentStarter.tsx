@@ -143,15 +143,13 @@ const StudentStarter: React.FC = () => {
             responses compare with your classmates in real-time
           </p>
 
-          {/* Connection Status */}
-          <div className="flex items-center gap-2 mt-4">
-            <div
-              className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
-            ></div>
-            <span className="text-sm text-gray-600">
-              {isConnected ? "Connected to server" : "Connecting..."}
-            </span>
-          </div>
+          {/* Connection Status - only show when connecting */}
+          {!isConnected && (
+            <div className="flex items-center gap-2 mt-4">
+              <div className="w-2 h-2 rounded-full bg-red-500"></div>
+              <span className="text-sm text-gray-600">Connecting...</span>
+            </div>
+          )}
         </div>
 
         {/* input for name */}

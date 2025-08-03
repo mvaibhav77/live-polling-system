@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import type { RootState } from "../store/store";
 import { useStudent, useWebSocket } from "./useWebSocket";
 import { resetAnswerState } from "../store/slices/studentUISlice";
 
 export const useStudentSession = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const [isInitializing, setIsInitializing] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -116,15 +117,36 @@ export const useStudentSession = () => {
     [hasSubmitted, isSubmitting, student.name, currentPoll, submitAnswer]
   );
 
-  // Redirect if student hasn't joined (only after initialization)
+  // Handle kicked state - navigate to kicked out page
   useEffect(() => {
-    if (!isInitializing && (!student.hasJoined || !student.name)) {
+    if (student.isKicked) {
+      console.log("Student was kicked, navigating to /kicked-out");
+      navigate("/kicked-out");
+    }
+  }, [student.isKicked, navigate]);
+
+  // Redirect if student hasn't joined (only after initialization and not on kicked-out page)
+  useEffect(() => {
+    if (
+      !isInitializing &&
+      (!student.hasJoined || !student.name) &&
+      location.pathname !== "/kicked-out"
+    ) {
+      console.log(
+        `Student redirect check: hasJoined=${student.hasJoined}, name=${student.name}, pathname=${location.pathname}`
+      );
       console.log(
         "Student not found or hasn't joined, redirecting to /student"
       );
       navigate("/student/get-started");
     }
-  }, [student.hasJoined, student.name, navigate, isInitializing]);
+  }, [
+    student.hasJoined,
+    student.name,
+    navigate,
+    isInitializing,
+    location.pathname,
+  ]);
 
   // Get poll stats from poll slice for waiting area
   const pollStats = useSelector((state: RootState) => state.poll.pollStats);

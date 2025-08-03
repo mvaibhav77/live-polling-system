@@ -142,7 +142,7 @@ const TeacherDashboard: React.FC = () => {
       </div>
 
       {/* Chat Modal */}
-      <ChatModal />
+      <ChatModal isTeacher={true} />
     </div>
   );
 };

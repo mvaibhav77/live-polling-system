@@ -12,7 +12,7 @@ import {
   type PollStats,
   type PollResults,
 } from "../../slices/pollSlice";
-import { setHasAnswered } from "../../slices/studentUISlice";
+import { setHasAnswered, setIsKicked } from "../../slices/studentUISlice";
 import { setLastMessage } from "../../slices/socketSlice";
 
 export const setupStudentEventHandlers = (
@@ -136,6 +136,59 @@ export const setupStudentEventHandlers = (
       dispatch(
         setLastMessage({
           type: "response-received",
+          payload: data,
+          timestamp: Date.now(),
+        })
+      );
+    }
+  );
+
+  socket.on(
+    "kicked-from-session",
+    (data: { reason?: string; message?: string }) => {
+      console.log("🚫 You have been kicked from the session:", data);
+
+      // Set kicked flag instead of direct navigation
+      dispatch(setIsKicked(true));
+
+      dispatch(
+        setLastMessage({
+          type: "kicked-from-session",
+          payload: data,
+          timestamp: Date.now(),
+        })
+      );
+    }
+  );
+
+  socket.on(
+    "student-kicked",
+    (data: { studentId: string; reason?: string; message?: string }) => {
+      console.log("🚫 Student kicked:", data);
+
+      // Check if this is the current student being kicked
+      const state = getState();
+      const currentStudent = state.poll.currentStudent;
+      const studentUIStudent = state.studentUI.currentStudent;
+
+      if (currentStudent && currentStudent.id === data.studentId) {
+        // This student was kicked, set kicked flag
+        console.log("Current student was kicked, setting kicked flag");
+        dispatch(setIsKicked(true));
+      } else if (studentUIStudent && studentUIStudent.id === data.studentId) {
+        // This student was kicked (from studentUI slice), set kicked flag
+        console.log(
+          "Current student (from studentUI) was kicked, setting kicked flag"
+        );
+        dispatch(setIsKicked(true));
+      } else {
+        // Another student was kicked, remove them from the students list
+        dispatch(removeStudent(data.studentId));
+      }
+
+      dispatch(
+        setLastMessage({
+          type: "student-kicked",
           payload: data,
           timestamp: Date.now(),
         })

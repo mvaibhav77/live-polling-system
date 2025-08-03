@@ -7,6 +7,7 @@ import PollArea from "./pages/PollArea";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import PollHistoryPage from "./pages/PollHistoryPage";
 import CreatePoll from "./pages/CreatePoll";
+import KickedOut from "./components/student/KickedOut";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
             <Route path="/student/get-started" element={<StudentStarter />} />
             <Route path="/poll" element={<PollArea />} />
             <Route path="/history" element={<PollHistoryPage />} />
+            <Route path="/kicked-out" element={<KickedOut />} />
           </Routes>
         </div>
       </BrowserRouter>

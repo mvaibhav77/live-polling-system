@@ -6,7 +6,11 @@ import ParticipantsTab from "./ParticipantsTab";
 import NotificationManager from "./NotificationManager";
 import ChatIcon from "../../assets/chat.svg";
 
-const ChatModal: React.FC = () => {
+interface ChatModalProps {
+  isTeacher?: boolean;
+}
+
+const ChatModal: React.FC<ChatModalProps> = ({ isTeacher = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"chat" | "participants">("chat");
   const dispatch = useAppDispatch();
@@ -116,6 +120,7 @@ const ChatModal: React.FC = () => {
                   participants={chatParticipants}
                   onKickStudent={handleKickStudent}
                   isConnected={isConnected}
+                  isTeacher={isTeacher}
                 />
               )}
             </div>
