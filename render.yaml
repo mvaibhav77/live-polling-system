@@ -1,11 +1,11 @@
 services:
   - type: web
     name: live-polling-api
-    runtime: docker
+    runtime: node
     plan: free
     region: oregon
-    dockerfilePath: ./apps/api/Dockerfile
-    dockerContext: .
+    buildCommand: npm install -g pnpm@8.12.0 && cd apps/api && NODE_ENV=development pnpm install --no-frozen-lockfile && pnpm db:generate && pnpm build
+    startCommand: cd apps/api && pnpm exec prisma migrate deploy && pnpm start
     envVars:
       - key: NODE_ENV
         value: production
