@@ -167,7 +167,9 @@ function CreatePoll() {
             {!isConnected && (
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                <span className="text-sm text-gray-600">Connecting...</span>
+                <span className="text-sm text-gray-600">
+                  Waking up the server...
+                </span>
               </div>
             )}
 
